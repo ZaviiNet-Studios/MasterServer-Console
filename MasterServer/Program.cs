@@ -63,8 +63,11 @@ namespace MasterServer
                         break;
 
                     case "connect":
+                        Console.WriteLine("Enter party size:");
+                        string partySizeString = Console.ReadLine();
+                        int partySize = int.Parse(partySizeString);
                         // Find an available game server and connect to it
-                        GameServer availableServer = GetAvailableServer((gameServers));
+                        GameServer availableServer = GetAvailableServer((gameServers), partySize);
                         if (availableServer.playerCount < availableServer.maxCapacity)
                         {
                             Console.WriteLine($"Sever has {availableServer.playerCount} players out of {availableServer.maxCapacity}");
@@ -82,7 +85,7 @@ namespace MasterServer
             }
         }
 
-        static GameServer GetAvailableServer(List<GameServer> gameServers)
+        static GameServer GetAvailableServer(List<GameServer> gameServers, int partySize)
         {
             // Check if there are any servers in the list
             if (gameServers.Count == 0)
@@ -95,7 +98,7 @@ namespace MasterServer
             gameServers.Sort((a, b) => a.playerCount.CompareTo(b.playerCount));
 
             // Find the first game server with a player count less than its maximum capacity
-            GameServer availableServer = gameServers.FirstOrDefault(server => server.playerCount < server.maxCapacity);
+            GameServer availableServer = gameServers.FirstOrDefault(server => server.playerCount + partySize <= server.maxCapacity);
             // Return the available server
             // If no available servers, return the server with the lowest player count
             return availableServer ?? gameServers[0];
@@ -134,7 +137,7 @@ namespace MasterServer
                 HttpListenerResponse response = context.Response;
 
                 // Get the request URL
-                string requestUrl = request.RawUrl;
+                string requestUrl = request.Url.AbsolutePath.ToLower();
 
                 switch (requestUrl)
                 {
@@ -180,26 +183,35 @@ namespace MasterServer
                     }
                     case "/connect":
                     {
-                        string responseString = "Connecting to game server...\n";
-                        GameServer availableServer = GetAvailableServer(gameServers);
-                        if (availableServer == null)
+                        string responseString = "";
+                        string partySizeString = request.QueryString["partySize"];
+                        int partySize = int.Parse(partySizeString);
+                        GameServer availableServer = GetAvailableServer((gameServers), partySize);
+                        if (availableServer.playerCount < availableServer.maxCapacity)
                         {
-                            responseString = "No available game servers";
-
+                            responseString = $"IpAddress={availableServer.ipAddress} Port={availableServer.port} PlayerCount={availableServer.playerCount} MaxCapacity={availableServer.maxCapacity}";
+                            // availableServer.playerCount++;
                         }
                         else
                         {
-                            responseString = $"IpAddress={availableServer.ipAddress} Port={availableServer.port} PlayerCount={availableServer.playerCount} MaxCapacity={availableServer.maxCapacity} InstanceId={availableServer.instanceId}";
+                            responseString = "No available game servers";
                         }
+                        // Convert the response string to a byte array
                         byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
                         response.ContentLength64 = responseBytes.Length;
                         response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                         break;
                     }
                     default:
-                        // Return a 404 error if the request URL is invalid
+                    {
+                        // Return a 404 response if the command is not recognized
+                        string responseString = "Error: Invalid command";
+                        byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
                         response.StatusCode = (int)HttpStatusCode.NotFound;
+                        response.ContentLength64 = responseBytes.Length;
+                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                         break;
+                    }
                 }
 
                 // Close the response
