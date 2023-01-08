@@ -11,18 +11,21 @@ namespace MasterServer
 
         static void Main(string[] args)
         {
-            Console.WriteLine("MasterServer");
-            Console.WriteLine();
-            Console.WriteLine("Starting MasterServer...");
-            Console.WriteLine();
-            Console.WriteLine($"Send POST Data To http://localhost:{port}");
-            Console.WriteLine();
+            System.Console.WriteLine("MasterServer");
+            System.Console.WriteLine();
+            System.Console.WriteLine("Starting MasterServer...");
+            System.Console.WriteLine();
+            System.Console.WriteLine($"Send POST Data To http://localhost:{port}");
+            System.Console.WriteLine();
+            System.Console.WriteLine("Waiting for Commands...");
+            System.Console.WriteLine();
+            System.Console.WriteLine("Press CTRL+C to exit...");
             
-            List<GameServer> gameServers = new List<GameServer>();
+            System.Collections.Generic.List<GameServer> gameServers = new System.Collections.Generic.List<GameServer>();
             
-            Thread listenThread = new Thread(() => ListenForServers(gameServers));
+            System.Threading.Thread listenThread = new System.Threading.Thread(() => ListenForServers(gameServers));
             listenThread.Start();
-            Thread httpListenThread = new Thread(() => ListenForHttpRequests(gameServers));
+            System.Threading.Thread httpListenThread = new System.Threading.Thread(() => ListenForHttpRequests(gameServers));
             httpListenThread.Start();
             
 
@@ -35,48 +38,48 @@ namespace MasterServer
                 {
                     case "add":
                         // Parse the arguments for the add command
-                        Console.WriteLine("Enter the IP address of the game server:");
+                        System.Console.WriteLine("Enter the IP address of the game server:");
                         var addIpAddress = Console.ReadLine();
-                        Console.WriteLine("Enter the port of the game server:");
-                        var addPort = int.Parse(Console.ReadLine()!);
-                        Console.WriteLine("Enter the current number of players on the game server:");
-                        var addPlayerCount = int.Parse(Console.ReadLine()!);
-                        Console.WriteLine("Enter the maximum capacity of the game server:");
-                        var addMaxCapacity = int.Parse(Console.ReadLine()!);
-                        Console.WriteLine("Enter the instanceID of the game server:");
+                        System.Console.WriteLine("Enter the port of the game server:");
+                        var addPort = int.Parse(Console.ReadLine());
+                        System.Console.WriteLine("Enter the current number of players on the game server:");
+                        var addPlayerCount = int.Parse(Console.ReadLine());
+                        System.Console.WriteLine("Enter the maximum capacity of the game server:");
+                        var addMaxCapacity = int.Parse(Console.ReadLine());
+                        System.Console.WriteLine("Enter the instanceID of the game server:");
                         var addInstanceId = Console.ReadLine();
 
                         // Add the game server to the list
-                        gameServers.Add(new GameServer(addIpAddress!, addPort, addPlayerCount, addMaxCapacity, addInstanceId!));
-                        Console.WriteLine($"Added game server at {addIpAddress}:{addPort} with InstanceID {addInstanceId}.");
+                        gameServers.Add(new GameServer(addIpAddress, addPort, addPlayerCount, addMaxCapacity, addInstanceId));
+                        System.Console.WriteLine($"Added game server at {addIpAddress}:{addPort} with InstanceID {addInstanceId}.");
                         break;
                     
                     case "list":
                         // List the available game servers
-                        Console.WriteLine("Available game servers:");
+                        System.Console.WriteLine("Available game servers:");
                         foreach (GameServer server in gameServers)
                         {
-                            Console.WriteLine(
+                            System.Console.WriteLine(
                                 $"[{server.instanceId}] {server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})");
                         }
 
                         break;
 
                     case "connect":
-                        Console.WriteLine("Enter party size:");
+                        System.Console.WriteLine("Enter party size:");
                         string partySizeString = Console.ReadLine();
                         int partySize = int.Parse(partySizeString);
                         // Find an available game server and connect to it
                         GameServer availableServer = GetAvailableServer((gameServers), partySize);
                         if (availableServer.playerCount < availableServer.maxCapacity)
                         {
-                            Console.WriteLine($"Sever has {availableServer.playerCount} players out of {availableServer.maxCapacity}");
-                            Console.WriteLine($"Connecting to {availableServer.ipAddress}:{availableServer.port}");
+                            System.Console.WriteLine($"Sever has {availableServer.playerCount} players out of {availableServer.maxCapacity}");
+                            System.Console.WriteLine($"Connecting to {availableServer.ipAddress}:{availableServer.port}");
                             availableServer.playerCount++;
                         }
                         else
                         {
-                            Console.WriteLine("No available game servers");
+                            System.Console.WriteLine("No available game servers");
                         }
 
                         break;
@@ -91,7 +94,7 @@ namespace MasterServer
             if (gameServers.Count == 0)
             {
                 // If no servers, return null
-                return null!;
+                return null;
             }
 
             // Sort the list of game servers by player count
@@ -253,7 +256,7 @@ namespace MasterServer
                     !values.ContainsKey("playerCount") || !values.ContainsKey("maxCapacity") ||
                     !values.ContainsKey("instanceId"))
                 {
-                    Console.WriteLine(
+                    System.Console.WriteLine(
                         $"Received invalid data from game server: {dataString} (Expected format: ipAddress=127.0.0.1&port=7777&playerCount=0&maxCapacity=50&instanceId=1234567890)");
                     continue;
                 }
