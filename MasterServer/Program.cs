@@ -192,7 +192,7 @@ namespace MasterServer
                         GameServer availableServer = GetAvailableServer((gameServers), partySize);
                         if (availableServer.playerCount < availableServer.maxCapacity)
                         {
-                            responseString = $"IpAddress={availableServer.ipAddress} Port={availableServer.port} PlayerCount={availableServer.playerCount} MaxCapacity={availableServer.maxCapacity}";
+                            responseString = "{\"ipAddress\":\"" + availableServer.ipAddress + "\",\"port\":" + availableServer.port + ",\"playerCount\":" + availableServer.playerCount + ",\"maxCapacity\":" + availableServer.maxCapacity + "}";
                             // availableServer.playerCount++;
                         }
                         else
@@ -200,6 +200,7 @@ namespace MasterServer
                             responseString = "No available game servers";
                         }
                         // Convert the response string to a byte array
+                        response.ContentType = "application/json";
                         byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
                         response.ContentLength64 = responseBytes.Length;
                         response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
