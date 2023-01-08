@@ -151,14 +151,11 @@ namespace MasterServer
                         string responseString = "Available game servers:\n";
                         foreach (GameServer server in gameServers)
                         {
-                            responseString +=
-                                $"{server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})\n";
+                            responseString += "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" + server.port + ",\"playerCount\":" + server.playerCount + ",\"maxCapacity\":" + server.maxCapacity + "}\n";
                         }
 
-                        // Convert the response string to a byte array
+                        response.ContentType = "application/json";
                         byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
-
-                        // Set the response length and send the response
                         response.ContentLength64 = responseBytes.Length;
                         response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                         break;
@@ -171,15 +168,12 @@ namespace MasterServer
                         {
                             if (server.playerCount == server.maxCapacity)
                             {
-                                responseString +=
-                                    $"{server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})\n";
+                                responseString = "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" + server.port + ",\"playerCount\":" + server.playerCount + ",\"maxCapacity\":" + server.maxCapacity + "}";
                             }
                         }
 
-                        // Convert the response string to a byte array
+                        response.ContentType = "application/json";
                         byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
-
-                        // Set the response length and send the response
                         response.ContentLength64 = responseBytes.Length;
                         response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                         break;
