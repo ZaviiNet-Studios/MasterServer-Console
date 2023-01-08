@@ -113,69 +113,6 @@ namespace MasterServer
             // Close the connection with the client
             client.Close();
         }
-
-        // static void ListenForHttpRequests(List<GameServer> gameServers)
-        // {
-        //     // Create a TCP listener
-        //     TcpListener listener = new TcpListener(IPAddress.Any, webPort);
-        //     listener.Start();
-        //
-        //     while (true)
-        //     {
-        //         // Wait for a client to connect
-        //         TcpClient client = listener.AcceptTcpClient();
-        //
-        //         // Read the data sent by the client
-        //         NetworkStream stream = client.GetStream();
-        //         byte[] data = new byte[1024];
-        //         int bytesRead = stream.Read(data, 0, data.Length);
-        //         string dataString = System.Text.Encoding.ASCII.GetString(data, 0, bytesRead);
-        //
-        //         // Split the data into separate values
-        //         string[] values = dataString.Split('\n');
-        //         if (values.Length < 2)
-        //         {
-        //             Console.WriteLine("Received invalid data from client");
-        //             continue;
-        //         }
-        //
-        //         string requestUrl = values[0];
-        //         if (requestUrl == "GET /list-servers HTTP/1.1")
-        //         {
-        //             // Send the list of game servers to the client
-        //             string response = "HTTP/1.1 200 OK\nContent-Type: text/plain\n\n";
-        //             foreach (GameServer server in gameServers)
-        //             {
-        //                 response += $"{server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})\n";
-        //             }
-        //             byte[] responseData = System.Text.Encoding.ASCII.GetBytes(response);
-        //             stream.Write(responseData, 0, responseData.Length);
-        //         }
-        //         else if (requestUrl == "GET /show-full-servers HTTP/1.1")
-        //         {
-        //             // Find the game servers with a player count equal to their maximum capacity
-        //             List<GameServer> fullServers = gameServers.FindAll(server => server.playerCount == server.maxCapacity);
-        //
-        //             // Send the list of full game servers to the client
-        //             string response = "HTTP/1.1 200 OK\nContent-Type: text/plain\n\n";
-        //             foreach (GameServer server in fullServers)
-        //             {
-        //                 response += $"{server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})\n";
-        //             }
-        //             byte[] responseData = System.Text.Encoding.ASCII.GetBytes(response);
-        //             stream.Write(responseData, 0, responseData.Length);
-        //         }
-        //         else
-        //         {
-        //             // Send a 404 response
-        //             string response = "HTTP/1.1 404 Not Found\nContent-Type: text/plain\n\n";
-        //         }
-        //
-        //         // Close the response
-        //         client.Close();
-        //     }
-        // }
-
         static void ListenForHttpRequests(List<GameServer> gameServers)
         {
             // Create a new HTTP listener
@@ -199,48 +136,70 @@ namespace MasterServer
                 // Get the request URL
                 string requestUrl = request.RawUrl;
 
-                // Handle the request
-                if (requestUrl == "/list-servers")
+                switch (requestUrl)
                 {
-                    // Build the response string
-                    string responseString = "Available game servers:\n";
-                    foreach (GameServer server in gameServers)
+                    // Handle the request
+                    case "/list-servers":
                     {
-                        responseString +=
-                            $"{server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})\n";
-                    }
-
-                    // Convert the response string to a byte array
-                    byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
-
-                    // Set the response length and send the response
-                    response.ContentLength64 = responseBytes.Length;
-                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                }
-                else if (requestUrl == "/show-full-servers")
-                {
-                    // Build the response string
-                    string responseString = "Full game servers:\n";
-                    foreach (GameServer server in gameServers)
-                    {
-                        if (server.playerCount == server.maxCapacity)
+                        // Build the response string
+                        string responseString = "Available game servers:\n";
+                        foreach (GameServer server in gameServers)
                         {
                             responseString +=
                                 $"{server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})\n";
                         }
+
+                        // Convert the response string to a byte array
+                        byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
+
+                        // Set the response length and send the response
+                        response.ContentLength64 = responseBytes.Length;
+                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                        break;
                     }
+                    case "/show-full-servers":
+                    {
+                        // Build the response string
+                        string responseString = "Full game servers:\n";
+                        foreach (GameServer server in gameServers)
+                        {
+                            if (server.playerCount == server.maxCapacity)
+                            {
+                                responseString +=
+                                    $"{server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})\n";
+                            }
+                        }
 
-                    // Convert the response string to a byte array
-                    byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
+                        // Convert the response string to a byte array
+                        byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
 
-                    // Set the response length and send the response
-                    response.ContentLength64 = responseBytes.Length;
-                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                }
-                else
-                {
-                    // Return a 404 error if the request URL is invalid
-                    response.StatusCode = (int)HttpStatusCode.NotFound;
+                        // Set the response length and send the response
+                        response.ContentLength64 = responseBytes.Length;
+                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                        break;
+                    }
+                    case "/connect":
+                    {
+                        string responseString = "Connecting to game server...\n";
+                        GameServer availableServer = GetAvailableServer(gameServers);
+                        if (availableServer == null)
+                        {
+                            responseString = "No available game servers";
+
+                        }
+                        else
+                        {
+                            responseString = $"IpAddress={availableServer.ipAddress} Port={availableServer.port} PlayerCount={availableServer.playerCount} MaxCapacity={availableServer.maxCapacity} InstanceId={availableServer.instanceId}";
+                        }
+                        byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
+                        response.ContentLength64 = responseBytes.Length;
+                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                        break;
+                    }
+                    default:
+                        // Return a 404 error if the request URL is invalid
+                        response.StatusCode = (int)HttpStatusCode.NotFound;
+                        break;
                 }
 
                 // Close the response
