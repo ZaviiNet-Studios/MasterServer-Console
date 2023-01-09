@@ -2,7 +2,7 @@
 {
     public class Settings
     {
-        public Settings(bool createInitialGameServers = default, bool createStandbyGameServers = default, string dockerContainerImage = null, string dockerHost = null, string dockerNetwork = null,
+        public Settings(bool createInitialGameServers = default, bool createStandbyGameServers = default, string dockerContainerImage = null, string dockerContainerImageTag = null, string dockerHost = null, string dockerNetwork = null,
             string dockerTcpNetwork = null, bool dockerContainerAutoRemove = default,
             bool dockerContainerAutoStart = default, bool dockerContainerAutoUpdate = default,
             string masterServerIp = null, int masterServerWebPort = default, int masterServerApiPort = default,
@@ -17,6 +17,7 @@
             CreateInitialGameServers = createInitialGameServers;
             CreateStandbyGameServers = createStandbyGameServers;
             DockerContainerImage = dockerContainerImage;
+            DockerContainerImageTag = dockerContainerImageTag;
             DockerHost = dockerHost;
             DockerNetwork = dockerNetwork;
             DockerTcpNetwork = dockerTcpNetwork;
@@ -46,9 +47,11 @@
         }
 
         public string DockerContainerImage { get; set; }
-        public string DockerHost { get; set; } = "unix:///var/run/docker.sock";
+        
+        public string DockerContainerImageTag { get; set; }
+        public string DockerHost { get; set; } 
         public string DockerNetwork { get; set; }
-        public string DockerTcpNetwork { get; set; } = "tcp://localhost:2375";
+        public string DockerTcpNetwork { get; set; }
         public bool DockerContainerAutoRemove { get; set; }
         public bool DockerContainerAutoStart { get; set; }
         public bool DockerContainerAutoUpdate { get; set; }

@@ -9,22 +9,22 @@ namespace MasterServer
 {
     class Program
     {
-        static readonly int port = 13000;
-        private static readonly int webPort = 8080;
-        private static readonly string defaultIP = "localhost";
-        static int portPool = 56100;
-
+        static Settings settings = LoadSettings();
+        static readonly int port = settings.MasterServerPort;
+        private static readonly int webPort = settings.MasterServerApiPort;
+        private static readonly string defaultIP = $"{settings.MasterServerIp}";
+        private static int portPool = settings.GameServerPortPool;
+        
         static void Main(string[] args)
         {
             
-            System.Console.WriteLine("MasterServer");
+            System.Console.WriteLine("Loading MasterServer-Console");
             System.Console.WriteLine();
-            System.Console.WriteLine("Starting MasterServer...");
-            Settings settings = LoadSettings();
+            System.Console.WriteLine($"Starting {settings.MasterServerName}...");
             System.Console.WriteLine();
-            System.Console.WriteLine($"Send POST Data To http://localhost:{port}");
+            System.Console.WriteLine($"Send POST Data To http://{settings.MasterServerIp}:{port}");
             System.Console.WriteLine();
-            System.Console.WriteLine("Waiting for Commands...");
+            System.Console.WriteLine("Waiting for Commands... type 'help' to get a list of commands");
             System.Console.WriteLine();
             System.Console.WriteLine("Press CTRL+C to exit...");
 
@@ -45,6 +45,26 @@ namespace MasterServer
 
                 switch (command)
                 {
+                    case "help":
+                        Console.WriteLine("List of available commands:");
+                        Console.WriteLine("add - adds a new game server to the list");
+                        Console.WriteLine("remove - removes a game server from the list");
+                        Console.WriteLine("list - lists all available game servers");
+                        Console.WriteLine("apihelp - lists the API");
+                        Console.WriteLine("clear - clears the console");
+                        //Console.WriteLine("connect - connects to a game server with the specified party size");
+                        Console.WriteLine("help - displays this list of commands");
+                        break;
+                    case "apihelp":
+                        Console.WriteLine("API Help");
+                        Console.WriteLine("/connect?partySize=*PartySize* - Connects to a game server with the specified party size eg. /connect?partySize=4");
+                        Console.WriteLine("/list-servers - Lists all available game servers");
+                        Console.WriteLine("/show-full-servers - Lists all full game servers");
+                        Console.WriteLine("/add - Adds a new game server to the list");
+                        break;
+                    case "clear":
+                        Console.Clear();
+                        break;
                     case "add":
                         // Parse the arguments for the add command
                         System.Console.WriteLine("Enter the IP address of the game server:");
@@ -64,7 +84,15 @@ namespace MasterServer
                         System.Console.WriteLine(
                             $"Added game server at {addIpAddress}:{addPort} with InstanceID {addInstanceId}.");
                         break;
-
+                    case "remove":
+                        // Parse the argument for the remove command
+                        Console.WriteLine("Enter the port of the game server:");
+                        var removePort = int.Parse(Console.ReadLine());
+                        // Remove the game server from the list
+                        gameServers.RemoveAll(server => server.port == removePort);
+                        DeleteDockerContainerByPort(gameServers, removePort);
+                        Console.WriteLine($"Removed game server at port {removePort}.");
+                        break;
                     case "list":
                         // List the available game servers
                         System.Console.WriteLine("Available game servers:");
@@ -73,29 +101,27 @@ namespace MasterServer
                             System.Console.WriteLine(
                                 $"[{server.instanceId}] {server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})");
                         }
-
                         break;
 
-                    case "connect":
-                        System.Console.WriteLine("Enter party size:");
-                        string partySizeString = Console.ReadLine();
-                        int partySize = int.Parse(partySizeString);
-                        // Find an available game server and connect to it
-                        GameServer availableServer = GetAvailableServer((gameServers), partySize);
-                        if (availableServer.playerCount < availableServer.maxCapacity)
-                        {
-                            System.Console.WriteLine(
-                                $"Sever has {availableServer.playerCount} players out of {availableServer.maxCapacity}");
-                            System.Console.WriteLine(
-                                $"Connecting to {availableServer.ipAddress}:{availableServer.port}");
-                            availableServer.playerCount++;
-                        }
-                        else
-                        {
-                            System.Console.WriteLine("No available game servers");
-                        }
-
-                        break;
+                    // case "connect":
+                    //     System.Console.WriteLine("Enter party size:");
+                    //     string partySizeString = Console.ReadLine();
+                    //     int partySize = int.Parse(partySizeString);
+                    //     // Find an available game server and connect to it
+                    //     GameServer availableServer = GetAvailableServer((gameServers), partySize);
+                    //     if (availableServer.playerCount < availableServer.maxCapacity)
+                    //     {
+                    //         System.Console.WriteLine(
+                    //             $"Sever has {availableServer.playerCount} players out of {availableServer.maxCapacity}");
+                    //         System.Console.WriteLine(
+                    //             $"Connecting to {availableServer.ipAddress}:{availableServer.port}");
+                    //         availableServer.playerCount++;
+                    //     }
+                    //     else
+                    //     {
+                    //         System.Console.WriteLine("No available game servers");
+                    //     }
+                    //     break;
                 }
             }
         }
@@ -110,7 +136,8 @@ namespace MasterServer
                 {
                     CreateInitialGameServers = true,
                     CreateStandbyGameServers = false,
-                    DockerContainerImage = "ubuntu:18.04",
+                    DockerContainerImage = "ubuntu",
+                    DockerContainerImageTag = "18.04",
                     DockerHost = "unix:///var/run/docker.sock",
                     DockerNetwork = "bridge",
                     DockerTcpNetwork = "tcp://0.0.0.0:2376",
@@ -191,7 +218,7 @@ namespace MasterServer
             HttpListener httpListener = new HttpListener();
 
             // Add the prefixes to the listener
-            httpListener.Prefixes.Add("http://localhost:8080/");
+            httpListener.Prefixes.Add($"http://{defaultIP}:{webPort}/");
 
             // Start the listener
             httpListener.Start();
@@ -248,40 +275,48 @@ namespace MasterServer
                             }
                             case "/connect":
                             {
-                                responseString = "";
-                                var partySizeString = request.QueryString["partySize"];
-                                var partySize = int.Parse(partySizeString);
-                                var availableServer = GetAvailableServer((gameServers), partySize);
-                                if (availableServer != null)
+                                if (settings.AllowServerJoining)
                                 {
-                                    if (availableServer.playerCount < availableServer.maxCapacity)
+                                    responseString = "";
+                                    var partySizeString = request.QueryString["partySize"];
+                                    var partySize = int.Parse(partySizeString);
+                                    var availableServer = GetAvailableServer((gameServers), partySize);
+                                    if (availableServer != null)
                                     {
-                                        responseString =
-                                            "{\"ipAddress\":\"" + availableServer.ipAddress + "\",\"port\":" +
-                                            availableServer.port + ",\"playerCount\":" +
-                                            availableServer.playerCount + ",\"maxCapacity\":" +
-                                            availableServer.maxCapacity + "}";
-                                        availableServer.playerCount += partySize;
+                                        if (availableServer.playerCount < availableServer.maxCapacity)
+                                        {
+                                            responseString =
+                                                "{\"ipAddress\":\"" + availableServer.ipAddress + "\",\"port\":" +
+                                                availableServer.port + ",\"playerCount\":" +
+                                                availableServer.playerCount + ",\"maxCapacity\":" +
+                                                availableServer.maxCapacity + "}";
+                                            availableServer.playerCount += partySize;
+                                        }
+                                        else
+                                        {
+                                            responseString = "No available game servers";
+                                        }
                                     }
                                     else
                                     {
-                                        responseString = "No available game servers";
+                                        CreateDockerContainer(gameServers,partySize);
+                                        GameServer newServer = CreateNewServer(gameServers, partySize);
+                                        if (newServer != null)
+                                        {
+                                            responseString =
+                                                $"{{\"ipAddress\":\"{newServer.ipAddress}\", \"port\":{newServer.port}, \"playerCount\":{newServer.playerCount}, \"maxCapacity\":{newServer.maxCapacity}, \"instanceId\":\"{newServer.instanceId}\"}}";
+                                            newServer.playerCount += partySize;
+                                        }
+                                        else
+                                        {
+                                            responseString = "Error creating new server";
+                                        }
                                     }
                                 }
                                 else
                                 {
-                                    CreateDockerContainer(partySize);
-                                    GameServer newServer = CreateNewServer(gameServers, partySize);
-                                    if (newServer != null)
-                                    {
-                                        responseString =
-                                            $"{{\"ipAddress\":\"{newServer.ipAddress}\", \"port\":{newServer.port}, \"playerCount\":{newServer.playerCount}, \"maxCapacity\":{newServer.maxCapacity}, \"instanceId\":\"{newServer.instanceId}\"}}";
-                                        newServer.playerCount += partySize;
-                                    }
-                                    else
-                                    {
-                                        responseString = "Error creating new server";
-                                    }
+                                    responseString = "Server joining is disabled";
+                                    Console.WriteLine("Server joining is disabled");
                                 }
                             }
                                 break;
@@ -316,39 +351,54 @@ namespace MasterServer
 
         private static GameServer CreateNewServer(List<GameServer> gameServers, int partySize)
         {
-            var gameServer = new GameServer(defaultIP, portPool, 0, 50, "0");
+            var gameServer = new GameServer(defaultIP, portPool, 0, settings.MaxPlayersPerServer, "0");
             gameServers.Add(gameServer);
             portPool++;
             return gameServer;
         }
 
-        private static void CreateDockerContainer(int partySize)
+        private static void CreateDockerContainer(List<GameServer> gameServers, int partySize)
         {
-            string endpointUrl = "tcp://localhost:2375";
-            
-            // Create a new DockerClient using the endpoint URL
-            DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-
-            // Set the image name and tag to use for the new container
-            string imageName = "alpine";
-            string imageTag = "latest";
-
-            // Set the command to run in the new container
-            string[] cmd = { "echo", "Hello, World!" };
-
-            // Create a new container using the image name and tag, and the specified command
-            var createResponse = client.Containers.CreateContainerAsync(new CreateContainerParameters
+            if (settings.AllowServerCreation)
             {
-                Image = imageName + ":" + imageTag,
-                Cmd = cmd
-            }).Result;
+                if (settings.MaxGameServers < gameServers.Count)
+                {
+                    string endpointUrl = $"{settings.DockerTcpNetwork}";
 
-            // Get the ID of the new container
-            string containerId = createResponse.ID;
+                    // Create a new DockerClient using the endpoint URL
+                    DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
 
-            // Start the new container
-            client.Containers.StartContainerAsync(containerId, null).Wait();
-            
+                    // Set the image name and tag to use for the new container
+                    string imageName = $"{settings.DockerContainerImage}";
+                    string imageTag = $"{settings.DockerContainerImageTag}";
+
+                    // Set the command to run in the new container
+                    //TODO Remove hardcoded port
+                    string[] cmd = { "echo", "Hello, World!" };
+
+                    // Create a new container using the image name and tag, and the specified command
+                    var createResponse = client.Containers.CreateContainerAsync(new CreateContainerParameters
+                    {
+                        Image = imageName + ":" + imageTag,
+                        Cmd = cmd
+                    }).Result;
+
+                    // Get the ID of the new container
+                    string containerId = createResponse.ID;
+
+                    // Start the new container
+                    client.Containers.StartContainerAsync(containerId, null).Wait();
+                }
+                else
+                {
+                    Console.WriteLine("Max game servers reached");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Server creation is not allowed please check the settings file to enable it!");
+            }
+
         }
 
         static void CheckForEmptyServers(List<GameServer> gameServers)
@@ -371,21 +421,58 @@ namespace MasterServer
             }
         }
 
-        static void DeleteDockerContainer(List<GameServer> gameServers, string containerId)
+        static void DeleteDockerContainerByPort(List<GameServer> gameServers, int port)
         {
-            // Set the API endpoint URL
-            string endpointUrl = $"tcp://localhost:2375";
-
-            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-
-            // Delete the container by its ID
+            string endpointUrl = $"{settings.DockerTcpNetwork}";
+            
+            // Create a new DockerClient using the endpoint URL
+            DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
+            
+            // Get the ID of the container to delete
+            string containerId = gameServers.Find(server => server.port == port).instanceId;
+            
+            // Delete the container
             try
             {
-                client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters()).Wait();
+                client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters { Force = true })
+                    .Wait();
             }
             catch (DockerApiException ex)
             {
                 Console.WriteLine("Error deleting container: {0}", ex.Message);
+            }
+        }
+
+        static void DeleteDockerContainer(List<GameServer> gameServers, string containerId)
+        {
+            // Set the API endpoint URL
+            string endpointUrl = $"{settings.DockerTcpNetwork}";
+
+            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
+
+
+            if (settings.AllowServerDeletion)
+            {
+                // Delete the container by its ID
+                try
+                {
+                    client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters()).Wait();
+                }
+                catch (DockerApiException ex)
+                {
+                    Console.WriteLine("Error deleting container: {0}", ex.Message);
+                }
+            }
+            else
+            {
+                try
+                {
+                    client.Containers.StopContainerAsync(containerId, new ContainerStopParameters()).Wait();
+                }
+                catch (DockerApiException ex)
+                {
+                    Console.WriteLine("Error stopping container: {0}", ex.Message);
+                }
             }
         }
 

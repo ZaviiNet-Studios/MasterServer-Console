@@ -8,7 +8,8 @@
     ".NETCoreApp,Version=v7.0": {
       "MasterServer/1.0.0": {
         "dependencies": {
-          "Docker.DotNet": "3.125.12"
+          "Docker.DotNet": "3.125.12",
+          "Newtonsoft.Json": "13.0.1"
         },
         "runtime": {
           "MasterServer.dll": {}
