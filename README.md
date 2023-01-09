@@ -9,7 +9,8 @@ This is Non-Production use, Alot of Functions are still Work In Progress and are
 ## Requirements
 
 - .NET Core 3.1
-- Docker
+- Docker with linux contains & tcp daemon enabled.
+- A GameServer Docker Image with port 7777 Exposed - See DockerFile for example
 ## Configuration Variables
 
 To run this project, you will need to add the following environment variables to your settings.json file located in config
