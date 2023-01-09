@@ -3,7 +3,7 @@
 
 This console application allows you to manage a list of game servers and perform various actions on them, such as adding or deleting servers from the list, and creating or deleting Docker containers.
 
-
+This is Non-Production use, Alot of Functions are still Work In Progress and are not ready.
 
 
 ## Requirements
