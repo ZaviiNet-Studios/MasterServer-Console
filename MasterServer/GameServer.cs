@@ -17,4 +17,13 @@ public class GameServer
         this.maxCapacity = maxCapacity;
         this.instanceId = instanceId;
     }
+
+    public GameServer()
+    {
+        ipAddress = "";
+        port = 0;
+        playerCount = 0;
+        maxCapacity = 0;
+        instanceId = "";
+    }
 }
