@@ -3,11 +3,14 @@ C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\Mas
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\MasterServer.runtimeconfig.json
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\MasterServer.dll
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\MasterServer.pdb
+C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\Docker.DotNet.dll
+C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\Newtonsoft.Json.dll
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.csproj.AssemblyReference.cache
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.AssemblyInfoInputs.cache
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.AssemblyInfo.cs
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.csproj.CoreCompileInputs.cache
+C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.csproj.CopyComplete
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.dll
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\refint\MasterServer.dll
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.pdb

@@ -1,8 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "J83TrNh6idY5XLFifOabq4WdHQ//bnTl0xK45z+cJkn4Ccz+uT3mQFd+KJ1qkCvZJJYEnijcF5tQ/6LJJHXvbw==",
+  "dgSpecHash": "hhgLBrfEl3TcBfPnXjsYHUTAfVvE6rY4BJXxYZz1Ivdri2SJMOhhoe0y5s9OXZ/+fqbJnuYtJh6wPwzCPKQosQ==",
   "success": true,
   "projectFilePath": "C:\\Users\\ZaviiNet\\RiderProjects\\MasterServer\\MasterServer\\MasterServer.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\ZaviiNet\\.nuget\\packages\\docker.dotnet\\3.125.12\\docker.dotnet.3.125.12.nupkg.sha512",
+    "C:\\Users\\ZaviiNet\\.nuget\\packages\\newtonsoft.json\\13.0.1\\newtonsoft.json.13.0.1.nupkg.sha512",
+    "C:\\Users\\ZaviiNet\\.nuget\\packages\\system.buffers\\4.5.1\\system.buffers.4.5.1.nupkg.sha512",
+    "C:\\Users\\ZaviiNet\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512"
+  ],
   "logs": []
 }

@@ -1,6 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Docker.DotNet;
+using Docker.DotNet.Models;
+using Newtonsoft.Json;
 
 namespace MasterServer
 {
@@ -13,23 +16,27 @@ namespace MasterServer
 
         static void Main(string[] args)
         {
+            
             System.Console.WriteLine("MasterServer");
             System.Console.WriteLine();
             System.Console.WriteLine("Starting MasterServer...");
+            Settings settings = LoadSettings();
             System.Console.WriteLine();
             System.Console.WriteLine($"Send POST Data To http://localhost:{port}");
             System.Console.WriteLine();
             System.Console.WriteLine("Waiting for Commands...");
             System.Console.WriteLine();
             System.Console.WriteLine("Press CTRL+C to exit...");
-            
+
             System.Collections.Generic.List<GameServer> gameServers = new System.Collections.Generic.List<GameServer>();
-            
+
             System.Threading.Thread listenThread = new System.Threading.Thread(() => ListenForServers(gameServers));
             listenThread.Start();
-            System.Threading.Thread httpListenThread = new System.Threading.Thread(() => ListenForHttpRequests(gameServers));
+            System.Threading.Thread httpListenThread =
+                new System.Threading.Thread(() => ListenForHttpRequests(gameServers));
             httpListenThread.Start();
-            
+            System.Threading.Thread checkServersThread = new System.Threading.Thread(() => CheckForEmptyServers(gameServers));
+            checkServersThread.Start();
 
             while (true)
             {
@@ -92,6 +99,58 @@ namespace MasterServer
                 }
             }
         }
+        
+        private static Settings LoadSettings()
+        {
+            string filePath = "config/settings.json";
+
+            if (!File.Exists(filePath))
+            {
+                Settings defaultSettings = new Settings
+                {
+                    CreateInitialGameServers = true,
+                    CreateStandbyGameServers = false,
+                    DockerContainerImage = "ubuntu:18.04",
+                    DockerHost = "unix:///var/run/docker.sock",
+                    DockerNetwork = "bridge",
+                    DockerTcpNetwork = "tcp://0.0.0.0:2376",
+                    DockerContainerAutoRemove = true,
+                    DockerContainerAutoStart = true,
+                    DockerContainerAutoUpdate = true,
+                    MasterServerIp = "localhost",
+                    MasterServerWebPort = 80,
+                    MasterServerApiPort = 8080,
+                    MasterServerPort = 13000,
+                    MasterServerName = "Master Server Instance",
+                    MasterServerPassword = "password",
+                    MaxGameServers = 100,
+                    MaxPlayers = 10000,
+                    MaxPlayersPerServer = 50,
+                    MaxPartyMembers = 5,
+                    AllowServerCreation = true,
+                    AllowServerDeletion = true,
+                    AllowServerJoining = true,
+                    ServerRestartOnCrash = true,
+                    ServerRestartOnShutdown = false,
+                    ServerRestartOnUpdate = false,
+                    ServerRestartSchedule = true,
+                    ServerRestartScheduleTime = "00:00",
+                    GameServerPortPool = 5100,
+                    GameServerRandomPorts = false
+                };
+                string json = JsonConvert.SerializeObject(defaultSettings, Formatting.Indented);
+
+                Directory.CreateDirectory("config");
+                File.WriteAllText(filePath, json);
+                return defaultSettings;
+            }
+            else
+            {
+                string json = File.ReadAllText(filePath);
+                Settings settings = JsonConvert.DeserializeObject<Settings>(json);
+                return settings;
+            }
+        }
 
         static GameServer GetAvailableServer(List<GameServer> gameServers, int partySize)
         {
@@ -106,12 +165,13 @@ namespace MasterServer
             gameServers.Sort((a, b) => a.playerCount.CompareTo(b.playerCount));
 
             // Find the first game server with a player count less than its maximum capacity
-            GameServer availableServer = gameServers.FirstOrDefault(server => server.playerCount + partySize <= server.maxCapacity);
+            GameServer availableServer =
+                gameServers.FirstOrDefault(server => server.playerCount + partySize <= server.maxCapacity);
             // Return the available server
             // If no available servers, return the server with the lowest player count
             return availableServer ?? gameServers[0];
         }
-        
+
         private static void SendResponse(TcpClient client, string response)
         {
             // Convert the response string to a byte array
@@ -210,10 +270,7 @@ namespace MasterServer
                                 }
                                 else
                                 {
-                                    // No available servers with enough capacity, create a new one
-                                    // Send request to Docker API to create a new Server
-                                    // Wait for new server to come online
-                                    // check for available servers again
+                                    CreateDockerContainer(partySize);
                                     GameServer newServer = CreateNewServer(gameServers, partySize);
                                     if (newServer != null)
                                     {
@@ -259,10 +316,77 @@ namespace MasterServer
 
         private static GameServer CreateNewServer(List<GameServer> gameServers, int partySize)
         {
-            var gameServer = new GameServer(defaultIP,portPool,0,50,"0");
+            var gameServer = new GameServer(defaultIP, portPool, 0, 50, "0");
             gameServers.Add(gameServer);
             portPool++;
             return gameServer;
+        }
+
+        private static void CreateDockerContainer(int partySize)
+        {
+            string endpointUrl = "tcp://localhost:2375";
+            
+            // Create a new DockerClient using the endpoint URL
+            DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
+
+            // Set the image name and tag to use for the new container
+            string imageName = "alpine";
+            string imageTag = "latest";
+
+            // Set the command to run in the new container
+            string[] cmd = { "echo", "Hello, World!" };
+
+            // Create a new container using the image name and tag, and the specified command
+            var createResponse = client.Containers.CreateContainerAsync(new CreateContainerParameters
+            {
+                Image = imageName + ":" + imageTag,
+                Cmd = cmd
+            }).Result;
+
+            // Get the ID of the new container
+            string containerId = createResponse.ID;
+
+            // Start the new container
+            client.Containers.StartContainerAsync(containerId, null).Wait();
+            
+        }
+
+        static void CheckForEmptyServers(List<GameServer> gameServers)
+        {
+            while (true)
+            {
+                // Sleep for 5 minutes
+                Thread.Sleep(5 * 60 * 1000);
+
+                // Check each game server in the list
+                foreach (GameServer server in gameServers)
+                {
+                    // If the server has 0 players, delete the container
+                    if (server.playerCount == 0)
+                    {
+                        DeleteDockerContainer(gameServers, server.instanceId);
+                    }
+                }
+                gameServers.RemoveAll(server => server.playerCount == 0);
+            }
+        }
+
+        static void DeleteDockerContainer(List<GameServer> gameServers, string containerId)
+        {
+            // Set the API endpoint URL
+            string endpointUrl = $"tcp://localhost:2375";
+
+            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
+
+            // Delete the container by its ID
+            try
+            {
+                client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters()).Wait();
+            }
+            catch (DockerApiException ex)
+            {
+                Console.WriteLine("Error deleting container: {0}", ex.Message);
+            }
         }
 
         private static void ListenForServers(List<GameServer> gameServers)
@@ -314,9 +438,7 @@ namespace MasterServer
                 var instanceId = values["instanceId"];
 
                 // Check if the game server is already in the list
-                GameServer gameServer =
-                    gameServers.Find(server =>
-                        server.ipAddress == ipAddress && server.port == port);
+                GameServer gameServer = gameServers.Find(server => server.ipAddress == ipAddress && server.port == port);
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (gameServer == null)
                 {
