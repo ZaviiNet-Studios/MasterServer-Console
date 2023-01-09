@@ -8,6 +8,8 @@ namespace MasterServer
     {
         static readonly int port = 13000;
         private static readonly int webPort = 8080;
+        private static readonly string defaultIP = "localhost";
+        static int portPool = 56100;
 
         static void Main(string[] args)
         {
@@ -50,10 +52,12 @@ namespace MasterServer
                         var addInstanceId = Console.ReadLine();
 
                         // Add the game server to the list
-                        gameServers.Add(new GameServer(addIpAddress, addPort, addPlayerCount, addMaxCapacity, addInstanceId));
-                        System.Console.WriteLine($"Added game server at {addIpAddress}:{addPort} with InstanceID {addInstanceId}.");
+                        gameServers.Add(new GameServer(addIpAddress, addPort, addPlayerCount, addMaxCapacity,
+                            addInstanceId));
+                        System.Console.WriteLine(
+                            $"Added game server at {addIpAddress}:{addPort} with InstanceID {addInstanceId}.");
                         break;
-                    
+
                     case "list":
                         // List the available game servers
                         System.Console.WriteLine("Available game servers:");
@@ -73,8 +77,10 @@ namespace MasterServer
                         GameServer availableServer = GetAvailableServer((gameServers), partySize);
                         if (availableServer.playerCount < availableServer.maxCapacity)
                         {
-                            System.Console.WriteLine($"Sever has {availableServer.playerCount} players out of {availableServer.maxCapacity}");
-                            System.Console.WriteLine($"Connecting to {availableServer.ipAddress}:{availableServer.port}");
+                            System.Console.WriteLine(
+                                $"Sever has {availableServer.playerCount} players out of {availableServer.maxCapacity}");
+                            System.Console.WriteLine(
+                                $"Connecting to {availableServer.ipAddress}:{availableServer.port}");
                             availableServer.playerCount++;
                         }
                         else
@@ -83,7 +89,6 @@ namespace MasterServer
                         }
 
                         break;
-
                 }
             }
         }
@@ -119,6 +124,7 @@ namespace MasterServer
             // Close the connection with the client
             client.Close();
         }
+
         static void ListenForHttpRequests(List<GameServer> gameServers)
         {
             // Create a new HTTP listener
@@ -139,82 +145,124 @@ namespace MasterServer
                 HttpListenerRequest request = context.Request;
                 HttpListenerResponse response = context.Response;
 
+
                 // Get the request URL
-                string requestUrl = request.Url.AbsolutePath.ToLower();
 
-                switch (requestUrl)
+                //string requestUrl = request.Url.AbsolutePath.ToLower();
+
+                switch (request.HttpMethod)
                 {
-                    // Handle the request
-                    case "/list-servers":
-                    {
-                        // Build the response string
-                        string responseString = "Available game servers:\n";
-                        foreach (GameServer server in gameServers)
+                    case "GET":
+                        var responseString = "";
+                        switch (request.Url.AbsolutePath)
                         {
-                            responseString += "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" + server.port + ",\"playerCount\":" + server.playerCount + ",\"maxCapacity\":" + server.maxCapacity + "}\n";
-                        }
-
-                        response.ContentType = "application/json";
-                        byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
-                        response.ContentLength64 = responseBytes.Length;
-                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                        break;
-                    }
-                    case "/show-full-servers":
-                    {
-                        // Build the response string
-                        string responseString = "Full game servers:\n";
-                        foreach (GameServer server in gameServers)
-                        {
-                            if (server.playerCount == server.maxCapacity)
+                            // Handle the request
+                            case "/list-servers":
                             {
-                                responseString = "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" + server.port + ",\"playerCount\":" + server.playerCount + ",\"maxCapacity\":" + server.maxCapacity + "}";
+                                // Build the response string
+                                responseString = "Available game servers:\n";
+                                foreach (GameServer server in gameServers)
+                                {
+                                    responseString += "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" +
+                                                      server.port + ",\"playerCount\":" + server.playerCount +
+                                                      ",\"maxCapacity\":" + server.maxCapacity + "}\n";
+                                }
+
+                                break;
                             }
+                            case "/show-full-servers":
+                            {
+                                // Build the response string
+                                responseString = "Full game servers:\n";
+                                foreach (GameServer server in gameServers)
+                                {
+                                    if (server.playerCount == server.maxCapacity)
+                                    {
+                                        responseString = "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" +
+                                                         server.port + ",\"playerCount\":" + server.playerCount +
+                                                         ",\"maxCapacity\":" + server.maxCapacity + "}";
+                                    }
+                                }
+
+                                break;
+                            }
+                            case "/connect":
+                            {
+                                responseString = "";
+                                var partySizeString = request.QueryString["partySize"];
+                                var partySize = int.Parse(partySizeString);
+                                var availableServer = GetAvailableServer((gameServers), partySize);
+                                if (availableServer != null)
+                                {
+                                    if (availableServer.playerCount < availableServer.maxCapacity)
+                                    {
+                                        responseString =
+                                            "{\"ipAddress\":\"" + availableServer.ipAddress + "\",\"port\":" +
+                                            availableServer.port + ",\"playerCount\":" +
+                                            availableServer.playerCount + ",\"maxCapacity\":" +
+                                            availableServer.maxCapacity + "}";
+                                        availableServer.playerCount += partySize;
+                                    }
+                                    else
+                                    {
+                                        responseString = "No available game servers";
+                                    }
+                                }
+                                else
+                                {
+                                    // No available servers with enough capacity, create a new one
+                                    // Send request to Docker API to create a new Server
+                                    // Wait for new server to come online
+                                    // check for available servers again
+                                    GameServer newServer = CreateNewServer(gameServers, partySize);
+                                    if (newServer != null)
+                                    {
+                                        responseString =
+                                            $"{{\"ipAddress\":\"{newServer.ipAddress}\", \"port\":{newServer.port}, \"playerCount\":{newServer.playerCount}, \"maxCapacity\":{newServer.maxCapacity}, \"instanceId\":\"{newServer.instanceId}\"}}";
+                                        newServer.playerCount += partySize;
+                                    }
+                                    else
+                                    {
+                                        responseString = "Error creating new server";
+                                    }
+                                }
+                            }
+                                break;
                         }
 
-                        response.ContentType = "application/json";
-                        byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
+                        var responseBytes = Encoding.UTF8.GetBytes(responseString);
                         response.ContentLength64 = responseBytes.Length;
                         response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                         break;
-                    }
-                    case "/connect":
-                    {
-                        string responseString = "";
-                        string partySizeString = request.QueryString["partySize"];
-                        int partySize = int.Parse(partySizeString);
-                        GameServer availableServer = GetAvailableServer((gameServers), partySize);
-                        if (availableServer.playerCount < availableServer.maxCapacity)
-                        {
-                            responseString = "{\"ipAddress\":\"" + availableServer.ipAddress + "\",\"port\":" + availableServer.port + ",\"playerCount\":" + availableServer.playerCount + ",\"maxCapacity\":" + availableServer.maxCapacity + "}";
-                            // availableServer.playerCount++;
-                        }
-                        else
-                        {
-                            responseString = "No available game servers";
-                        }
-                        // Convert the response string to a byte array
-                        response.ContentType = "application/json";
-                        byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
-                        response.ContentLength64 = responseBytes.Length;
-                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+
+                    case "POST":
+                        var requestBody = new StreamReader(request.InputStream).ReadToEnd();
+                        var requestLines = requestBody.Split('\n');
+                        var requestData = requestLines.Select(line => line.Split('='))
+                            .ToDictionary(a => a[0], a => a[1]);
+
+                        // Update the game servers list with the new data
+                        gameServers.Add(new GameServer(requestData["ipAddress"], int.Parse(requestData["port"]),
+                            int.Parse(requestData["playerCount"]), int.Parse(requestData["maxCapacity"]),
+                            requestData["instanceId"]));
+
+                        // Send a response to the server
+                        var responseBody = "Received data from game server\n";
+                        var responseBodyBytes = Encoding.UTF8.GetBytes(responseBody);
+                        response.ContentLength64 = responseBodyBytes.Length;
+                        response.OutputStream.Write(responseBodyBytes, 0, responseBodyBytes.Length);
                         break;
-                    }
-                    default:
-                    {
-                        // Return a 404 response if the command is not recognized
-                        string responseString = "Error: Invalid command";
-                        byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
-                        response.StatusCode = (int)HttpStatusCode.NotFound;
-                        response.ContentLength64 = responseBytes.Length;
-                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                        break;
-                    }
                 }
-
-                // Close the response
-                response.OutputStream.Close();
             }
+        }
+
+
+        private static GameServer CreateNewServer(List<GameServer> gameServers, int partySize)
+        {
+            var gameServer = new GameServer(defaultIP,portPool,0,50,"0");
+            gameServers.Add(gameServer);
+            portPool++;
+            return gameServer;
         }
 
         private static void ListenForServers(List<GameServer> gameServers)
@@ -238,8 +286,11 @@ namespace MasterServer
 
                 if (dataString.Contains("Content-Length:"))
                 {
-                    int contentLength = int.Parse(dataString.Substring(dataString.IndexOf("Content-Length:") + 16, 3));
-                    dataString = dataString.Substring(dataString.IndexOf("\r\n\r\n") + 4, contentLength);
+                    int contentLength =
+                        int.Parse(dataString.Substring(
+                            dataString.IndexOf("Content-Length:") + 16, 3));
+                    dataString = dataString.Substring(dataString.IndexOf("\r\n\r\n") + 4,
+                        contentLength);
                 }
 
 
@@ -264,12 +315,14 @@ namespace MasterServer
 
                 // Check if the game server is already in the list
                 GameServer gameServer =
-                    gameServers.Find(server => server.ipAddress == ipAddress && server.port == port);
+                    gameServers.Find(server =>
+                        server.ipAddress == ipAddress && server.port == port);
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (gameServer == null)
                 {
                     // If not in the list, add it
-                    gameServers.Add(new GameServer(ipAddress, port, playerCount, maxCapacity, instanceId));
+                    gameServers.Add(new GameServer(ipAddress, port, playerCount, maxCapacity,
+                        instanceId));
                 }
                 else
                 {
