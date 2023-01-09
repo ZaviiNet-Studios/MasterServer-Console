@@ -121,3 +121,24 @@ The console application uses the Docker API to manage Docker containers. Make su
 
 The console application uses the .NET HTTPClient library to make API requests. Ensure that you have the necessary dependencies installed.
 
+## Authors
+
+- [@ZaviiNet](https://github.com/ZaviiNet)
+
+
+
+
+## Contributing
+
+Contributions are always welcome!
+
+Open an Issue to get started, Pull Requests welcome!
+
+Please adhere to this project's `code of conduct`.
+
+
+
+## License
+
+[gpl-3.0](https://choosealicense.com/licenses/gpl-3.0/)
+
