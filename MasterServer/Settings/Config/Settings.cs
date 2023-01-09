@@ -2,7 +2,7 @@
 {
     public class Settings
     {
-        public Settings(bool createInitialGameServers = default, bool createStandbyGameServers = default, string dockerContainerImage = null, string dockerContainerImageTag = null, string dockerHost = null, string dockerNetwork = null,
+        public Settings(bool createInitialGameServers = default, int numberofInitialGameServers = default, bool createStandbyGameServers = default, string dockerContainerImage = null, string dockerContainerImageTag = null, string dockerHost = null, string dockerNetwork = null,
             string dockerTcpNetwork = null, bool dockerContainerAutoRemove = default,
             bool dockerContainerAutoStart = default, bool dockerContainerAutoUpdate = default,
             string masterServerIp = null, int masterServerWebPort = default, int masterServerApiPort = default,
@@ -15,6 +15,7 @@
             bool gameServerRandomPorts = default)
         {
             CreateInitialGameServers = createInitialGameServers;
+            NumberofInitialGameServers = numberofInitialGameServers;
             CreateStandbyGameServers = createStandbyGameServers;
             DockerContainerImage = dockerContainerImage;
             DockerContainerImageTag = dockerContainerImageTag;
@@ -55,6 +56,8 @@
         public bool DockerContainerAutoRemove { get; set; }
         public bool DockerContainerAutoStart { get; set; }
         public bool DockerContainerAutoUpdate { get; set; }
+        
+        public int NumberofInitialGameServers { get; set; }
 
         public string MasterServerIp { get; set; }
         public int MasterServerWebPort { get; set; }

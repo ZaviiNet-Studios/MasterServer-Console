@@ -11,6 +11,7 @@ namespace MasterServer
     {
         private static int numServers = 0;
         static Settings settings = LoadSettings();
+        private static GameServers InitialServers = InitialDockerContainerSettings();
         static readonly int port = settings.MasterServerPort;
         private static readonly int webPort = settings.MasterServerApiPort;
         private static readonly string defaultIP = settings.MasterServerIp;
@@ -41,6 +42,8 @@ namespace MasterServer
             System.Threading.Thread checkServersThread =
                 new System.Threading.Thread(() => CheckForEmptyServers(gameServers));
             checkServersThread.Start();
+            var partySize = 0;
+            CreateInitialGameServers(gameServers, partySize);
 
             while (true)
             {
@@ -56,6 +59,8 @@ namespace MasterServer
                         Console.WriteLine("list - lists all available game servers");
                         Console.WriteLine("apihelp - lists the API");
                         Console.WriteLine("clear - clears the console");
+                        Console.WriteLine("startall - starts all game servers");
+                        Console.WriteLine("stopall - stops all game servers");
                         //Console.WriteLine("connect - connects to a game server with the specified party size");
                         Console.WriteLine("help - displays this list of commands");
                         break;
@@ -97,6 +102,14 @@ namespace MasterServer
                         gameServers.RemoveAll(server => server.port == removePort);
                         DeleteDockerContainerByPort(gameServers, removePort);
                         Console.WriteLine($"Removed game server at port {removePort}.");
+                        break;
+                    case "stopall":
+                        StopAllDockerContainers(gameServers);
+                        Console.WriteLine("Stopped all game servers.");
+                        break;
+                    case "startall":
+                        StartAllDockerContainers(gameServers);
+                        Console.WriteLine("Started all game servers.");
                         break;
                     case "list":
                         // List the available game servers
@@ -165,6 +178,54 @@ namespace MasterServer
             catch (Exception e)
             {
                 Console.WriteLine("Error deleting containers: {0}", e.Message);
+            }
+        }
+
+        private static void CreateInitialGameServers(List<GameServer> gameServers, int partySize)
+        {
+            var gameServersToBeCreated = InitialServers.numServers;
+            var gameServersCreated = 0;
+            var InstancedID = "";
+            if (settings.CreateInitialGameServers)
+            {
+                while (true)
+                {
+                    if (gameServersCreated < gameServersToBeCreated)
+                    {
+                        CreateDockerContainer(gameServers, partySize, out InstancedID);
+                        CreateNewServer(gameServers, partySize, InstancedID);
+                        InstancedID = string.Empty;
+                        gameServersCreated++;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Initial game servers created successfully - Number Created = {0}", gameServersCreated);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static GameServers InitialDockerContainerSettings()
+        {
+            string filepath = "config/initialGameServers.json";
+            if (!File.Exists(filepath))
+            {
+                GameServers initialSettings = new GameServers
+                {
+                    numServers = 2
+                };
+                string json = JsonConvert.SerializeObject(initialSettings, Formatting.Indented);
+
+                Directory.CreateDirectory("config");
+                File.WriteAllText(filepath, json);
+                return initialSettings;
+            }
+            else
+            {
+                string json = File.ReadAllText(filepath);
+                GameServers initialSettings = JsonConvert.DeserializeObject<GameServers>(json);
+                return initialSettings;
             }
         }
 
@@ -496,6 +557,73 @@ namespace MasterServer
             {
                 Console.WriteLine("Error deleting container: {0}", ex.Message);
             }
+        }
+
+        static void StopAllDockerContainers(List<GameServer> gameServers)
+        {
+            string endpointUrl = $"{settings.DockerTcpNetwork}";
+            
+            // Create a new DockerClient using the endpoint URL
+            DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
+            
+            var containers = client.Containers.ListContainersAsync(new ContainersListParameters()
+            {
+                All = true
+            }).Result;
+
+            try
+            {
+                foreach (var container in containers)
+                {
+                    if (container.Names != null)
+                    {
+                        if (container.Names[0].Contains("GameServer-Instance--"))
+                        {
+                            client.Containers.StopContainerAsync(container.ID, new ContainerStopParameters()
+                            {
+                                WaitBeforeKillSeconds = 10
+                            }).Wait();
+                        }
+                    }
+                }
+            }
+            catch (DockerApiException ex)
+            {
+                Console.WriteLine("Error stopping container: {0}", ex.Message);
+            }
+        }
+
+        static void StartAllDockerContainers(List<GameServer> gameServers)
+        {
+            string endpointUrl = $"{settings.DockerTcpNetwork}";
+            
+            DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
+            
+            var containers = client.Containers.ListContainersAsync(new ContainersListParameters()
+            {
+                All = true
+            }).Result;
+
+            try
+            {
+                foreach (var container in containers)
+                {
+                    if (container.Names != null)
+                    {
+                        if (container.Names[0].Contains("GameServer-Instance--"))
+                        {
+                            client.Containers.StartContainerAsync(container.ID, new ContainerStartParameters()
+                            {
+                            }).Wait();
+                        }
+                    }
+                }
+            }
+            catch (DockerApiException ex)
+            {
+                Console.WriteLine("Error stopping container: {0}", ex.Message);
+            }
+            
         }
 
         static void DeleteDockerContainer(List<GameServer> gameServers, string containerId)
