@@ -48,7 +48,7 @@ namespace MasterServer
             
 
             var partySize = 0;
-            CreateInitialGameServers(gameServers, partySize);
+            CreateInitialGameServers(gameServers,null,null,partySize);
             
             PlayFabAdminAPI.ForgetAllCredentials();
             while (true)
@@ -167,7 +167,7 @@ namespace MasterServer
             }
         }
 
-        private static void CreateInitialGameServers(List<GameServer> gameServers, int partySize)
+        private static void CreateInitialGameServers(List<GameServer> gameServers,string ip, string port, int partySize)
         {
             var gameServersToBeCreated = InitialServers.numServers;
             var gameServersCreated = 0;
@@ -178,7 +178,7 @@ namespace MasterServer
                 {
                     if (gameServersCreated < gameServersToBeCreated)
                     {
-                        CreateDockerContainer(gameServers, partySize, out InstancedID);
+                        CreateDockerContainer(gameServers,ip,port,partySize, out InstancedID);
                         CreateNewServer(gameServers, partySize, InstancedID);
                         InstancedID = string.Empty;
                         gameServersCreated++;
@@ -445,7 +445,7 @@ namespace MasterServer
                                     else
                                     {
                                         var instancedID = string.Empty;
-                                        CreateDockerContainer(gameServers, partySize, out instancedID);
+                                        CreateDockerContainer(gameServers, null,null,partySize, out instancedID);
                                         GameServer newServer = CreateNewServer(gameServers, partySize, instancedID);
                                         if (newServer != null)
                                         {
@@ -543,9 +543,21 @@ namespace MasterServer
             return gameServer;
         }
 
-        private static void CreateDockerContainer(List<GameServer> gameServers, int partySize, out string InstancedID)
+        private static void CreateDockerContainer(List<GameServer> gameServers,string ip, string port, int partySize, out string InstancedID)
         {
             var newInstancedID = "";
+            var HostIP = "0.0.0.0";
+            var HostPort = _portPool;
+            
+            if (!string.IsNullOrEmpty(ip))
+            {
+                HostIP = ip;
+            }
+            if (!string.IsNullOrEmpty(port))
+            {
+                HostPort = Convert.ToInt32(port);
+            }
+
             if (Settings.AllowServerCreation)
             {
                 if (gameServers.Count < Settings.MaxGameServers)
@@ -564,7 +576,7 @@ namespace MasterServer
                     {
                         Image = imageName + ":" + imageTag,
                         Name = $"GameServer-Instance--{_numServers}",
-                        Hostname = "0.0.0.0",
+                        Hostname = HostIP,
                         ExposedPorts = new Dictionary<string, EmptyStruct>
                         {
                             {"7777/udp", default(EmptyStruct)}
@@ -573,7 +585,7 @@ namespace MasterServer
                         {
                             PortBindings = new Dictionary<string, IList<PortBinding>>
                             {
-                                { "7777/udp", new List<PortBinding> { new PortBinding { HostPort = _portPool+"/udp" } } },
+                                { "7777/udp", new List<PortBinding> { new PortBinding { HostPort = HostPort+"/udp" } } },
                             }
                         }
                     }).Result;
@@ -795,7 +807,7 @@ namespace MasterServer
                 {
                     if (gameServers.Count < Settings.MaxGameServers)
                     {
-                        CreateDockerContainer(gameServers, 0, out instanceId);
+                        CreateDockerContainer(gameServers, ipAddress,port.ToString(),0, out instanceId);
                         CreateNewServer(gameServers, 0, instanceId);
                     }
                     else
