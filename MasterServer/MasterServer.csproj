@@ -10,6 +10,14 @@
     <ItemGroup>
       <PackageReference Include="Docker.DotNet" Version="3.125.12" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+      <PackageReference Include="PlayFabAllSDK" Version="1.142.221207" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="admin-panel.html" />
+      <EmbeddedResource Include="admin-panel.html">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
     </ItemGroup>
 
 </Project>

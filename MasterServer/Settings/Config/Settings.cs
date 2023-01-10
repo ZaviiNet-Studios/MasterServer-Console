@@ -12,7 +12,7 @@
             bool serverRestartOnCrash = default, bool serverRestartOnShutdown = default,
             bool serverRestartOnUpdate = default, bool serverRestartSchedule = default,
             string serverRestartScheduleTime = null, int gameServerPortPool = default,
-            bool gameServerRandomPorts = default)
+            bool gameServerRandomPorts = default, string playFabTitleID = null, string developerSecretKey = null)
         {
             CreateInitialGameServers = createInitialGameServers;
             NumberofInitialGameServers = numberofInitialGameServers;
@@ -45,6 +45,8 @@
             ServerRestartScheduleTime = serverRestartScheduleTime;
             GameServerPortPool = gameServerPortPool;
             GameServerRandomPorts = gameServerRandomPorts;
+            PlayFabTitleID = playFabTitleID;
+            DeveloperSecretKey = developerSecretKey;
         }
 
         public string DockerContainerImage { get; set; }
@@ -84,5 +86,8 @@
         
         public bool CreateInitialGameServers { get; set; }
         public bool CreateStandbyGameServers { get; set; }
+        
+        public string PlayFabTitleID { get; set; }
+        public string DeveloperSecretKey { get; set; }
     }
 }
