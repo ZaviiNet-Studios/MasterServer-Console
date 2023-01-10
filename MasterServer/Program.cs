@@ -179,7 +179,7 @@ namespace MasterServer
                     if (gameServersCreated < gameServersToBeCreated)
                     {
                         CreateDockerContainer(gameServers,ip,port,partySize, out InstancedID);
-                        CreateNewServer(gameServers, partySize, InstancedID);
+                        CreateNewServer(gameServers,ip,port, partySize, InstancedID);
                         InstancedID = string.Empty;
                         gameServersCreated++;
                     }
@@ -446,7 +446,7 @@ namespace MasterServer
                                     {
                                         var instancedID = string.Empty;
                                         CreateDockerContainer(gameServers, null,null,partySize, out instancedID);
-                                        GameServer newServer = CreateNewServer(gameServers, partySize, instancedID);
+                                        GameServer newServer = CreateNewServer(gameServers, null,null,partySize, instancedID);
                                         if (newServer != null)
                                         {
                                             responseString =
@@ -535,9 +535,21 @@ namespace MasterServer
         }
         
 
-        private static GameServer CreateNewServer(List<GameServer> gameServers, int partySize, string InstancedID)
+        private static GameServer CreateNewServer(List<GameServer> gameServers, string ip,string port, int partySize, string InstancedID)
         {
-            var gameServer = new GameServer(DefaultIp, _portPool, 0, Settings.MaxPlayersPerServer, InstancedID, true);
+            var serverIP = DefaultIp;
+            var serverPort = _portPool;
+            if (!string.IsNullOrEmpty(ip))
+            {
+                serverIP = ip;
+            }
+            if (!string.IsNullOrEmpty(port))
+            {
+                serverPort = Convert.ToInt32(port);
+            }
+
+
+            var gameServer = new GameServer(serverIP, serverPort, 0, Settings.MaxPlayersPerServer, InstancedID, true);
             gameServers.Add(gameServer);
             _portPool++;
             return gameServer;
@@ -548,7 +560,7 @@ namespace MasterServer
             var newInstancedID = "";
             var HostIP = "0.0.0.0";
             var HostPort = _portPool;
-            
+
             if (!string.IsNullOrEmpty(ip))
             {
                 HostIP = ip;
@@ -557,6 +569,8 @@ namespace MasterServer
             {
                 HostPort = Convert.ToInt32(port);
             }
+            
+            Console.WriteLine($"New Server Requested with IP {HostIP} and Port {HostPort}");
 
             if (Settings.AllowServerCreation)
             {
@@ -597,6 +611,8 @@ namespace MasterServer
                     // Start the new container
                     client.Containers.StartContainerAsync(containerId, null).Wait();
                     _numServers++;
+                    
+                    Console.WriteLine($"New Server Created with ID {newInstancedID}");
                 }
                 else
                 {
@@ -808,7 +824,7 @@ namespace MasterServer
                     if (gameServers.Count < Settings.MaxGameServers)
                     {
                         CreateDockerContainer(gameServers, ipAddress,port.ToString(),0, out instanceId);
-                        CreateNewServer(gameServers, 0, instanceId);
+                        CreateNewServer(gameServers,ipAddress,port.ToString(), 0, instanceId);
                     }
                     else
                     {
