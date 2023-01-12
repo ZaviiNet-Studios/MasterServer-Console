@@ -1,4 +1,3 @@
-C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\admin-panel.html
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\MasterServer.exe
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\MasterServer.deps.json
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\MasterServer.runtimeconfig.json
@@ -19,3 +18,4 @@ C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\ref
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.pdb
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\MasterServer.genruntimeconfig.cache
 C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\obj\Release\net7.0\ref\MasterServer.dll
+C:\Users\ZaviiNet\RiderProjects\MasterServer\MasterServer\bin\Release\net7.0\servers.html

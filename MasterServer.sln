@@ -11,6 +11,8 @@ Global
 		{C9717240-C0D5-40B1-9AD9-C378424C6F12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C9717240-C0D5-40B1-9AD9-C378424C6F12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C9717240-C0D5-40B1-9AD9-C378424C6F12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9717240-C0D5-40B1-9AD9-C378424C6F12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9717240-C0D5-40B1-9AD9-C378424C6F12}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
 

@@ -125,7 +125,24 @@ namespace MasterServer
                             System.Console.WriteLine(
                                 $"[{server.instanceId}] {server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})");
                         }
-
+                        break;
+                    case "overwrite":
+                        //overwrite player count
+                        Console.WriteLine("Enter the port of the game server:");
+                        var overwritePort = int.Parse(Console.ReadLine());
+                        Console.WriteLine("Enter the new player count:");
+                        var overwritePlayerCount = int.Parse(Console.ReadLine());
+                        GameServer gameServer = gameServers.Find(server => server.port == overwritePort);
+                        if (gameServer != null)
+                        {
+                            gameServer.playerCount = overwritePlayerCount;
+                            System.Console.WriteLine(
+                                $"Overwrote player count of game server at port {overwritePort} to {overwritePlayerCount}.");
+                        }
+                        else
+                        {
+                            System.Console.WriteLine($"Game server at port {overwritePort} not found.");
+                        }
                         break;
                 }
             }
@@ -294,7 +311,9 @@ namespace MasterServer
             HttpListener httpListener = new HttpListener();
 
             // Add the prefixes to the listener
-            httpListener.Prefixes.Add("http://localhost:8080/");
+            httpListener.Prefixes.Add($"http://*:{WebPort}/");
+            
+            
 
             // Start the listener
             httpListener.Start();
@@ -339,13 +358,13 @@ namespace MasterServer
                                 response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                                 break;
                             }
-                            case "/admin-panel.html":
+                            case "/servers.html":
                             {
                                 // Get the assembly containing this code
                                 Assembly assembly = Assembly.GetExecutingAssembly();
                                 // Get the embedded resource stream
                                 Stream resourceStream =
-                                    assembly.GetManifestResourceStream("MasterServer.admin-panel.html");
+                                    assembly.GetManifestResourceStream("MasterServer.servers.html");
                                 using (StreamReader reader = new StreamReader(resourceStream))
                                 {
                                     // Read the contents of the HTML file

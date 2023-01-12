@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "hSyuvGZWjh2Ow8cENBjO1qdET+3KMBLyKXCUA48/id8r6TJQc5qrfh88F3S2DIiLW08yfdapFxWgfbq+2ErDIQ==",
+  "dgSpecHash": "6egb4P5rXCZ8S/H1ue1QeVHhU5MSX4d4bbC7g9XEDOLOF+O8RZ9vfhShcBzMRlyTThQaWDvnHuaaGvMVHgMcgg==",
   "success": true,
   "projectFilePath": "C:\\Users\\ZaviiNet\\RiderProjects\\MasterServer\\MasterServer\\MasterServer.csproj",
   "expectedPackageFiles": [
@@ -9,7 +9,10 @@
     "C:\\Users\\ZaviiNet\\.nuget\\packages\\playfaballsdk\\1.142.221207\\playfaballsdk.1.142.221207.nupkg.sha512",
     "C:\\Users\\ZaviiNet\\.nuget\\packages\\polly\\7.2.3\\polly.7.2.3.nupkg.sha512",
     "C:\\Users\\ZaviiNet\\.nuget\\packages\\system.buffers\\4.5.1\\system.buffers.4.5.1.nupkg.sha512",
-    "C:\\Users\\ZaviiNet\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512"
+    "C:\\Users\\ZaviiNet\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512",
+    "C:\\Users\\ZaviiNet\\.nuget\\packages\\microsoft.netcore.app.runtime.linux-x64\\7.0.1\\microsoft.netcore.app.runtime.linux-x64.7.0.1.nupkg.sha512",
+    "C:\\Users\\ZaviiNet\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.linux-x64\\7.0.1\\microsoft.aspnetcore.app.runtime.linux-x64.7.0.1.nupkg.sha512",
+    "C:\\Users\\ZaviiNet\\.nuget\\packages\\microsoft.netcore.app.host.linux-x64\\7.0.1\\microsoft.netcore.app.host.linux-x64.7.0.1.nupkg.sha512"
   ],
   "logs": []
 }

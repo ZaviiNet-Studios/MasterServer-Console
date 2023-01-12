@@ -15,7 +15,11 @@
 
     <ItemGroup>
       <None Remove="admin-panel.html" />
-      <EmbeddedResource Include="admin-panel.html">
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="servers.html" />
+      <EmbeddedResource Include="servers.html">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </EmbeddedResource>
     </ItemGroup>
