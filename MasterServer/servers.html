@@ -1,0 +1,95 @@
+﻿<html lang="en-gb">
+<head>
+    <title>Voids Adrift - Island Designer Active Server List</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: auto;
+        }
+
+        td, th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2em;
+            color: #333;
+            margin: 20px 0;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+
+        body {
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        table {
+            box-shadow: 0 0 10px #ccc;
+        }
+
+    </style>
+</head>
+<body>
+<h1>Voids Adrift - Island Designer Active Server List</h1>
+<table id="server-list">
+    <tr>
+        <th>IP Address</th>
+        <th>Port</th>
+        <th>Player Count</th>
+        <th>Max Capacity</th>
+        <th>Status</th>
+    </tr>
+    <tr>
+        <td id="ip-address-placeholder"></td>
+        <td id="port-placeholder"></td>
+        <td id="player-count-placeholder"></td>
+        <td id="max-capacity-placeholder"></td>
+        <td id="status-placeholder"></td>
+    </tr>
+</table>
+<script>
+    // Send an HTTP GET request to the "/admin-panel" endpoint when the page is loaded
+    window.onload = function() {
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                // Parse the response data
+                var data = JSON.parse(xhr.responseText);
+                // Update the table with the data
+                for (var i = 0; i < data.length; i++) {
+                    var row = document.createElement("tr");
+                    var ipCell = document.createElement("td");
+                    ipCell.innerHTML = data[i].ipAddress;
+                    var portCell = document.createElement("td");
+                    portCell.innerHTML = data[i].port;
+                    var playerCountCell = document.createElement("td");
+                    playerCountCell.innerHTML = data[i].playerCount;
+                    var maxCapacityCell = document.createElement("td");
+                    maxCapacityCell.innerHTML = data[i].maxCapacity;
+                    var statusCell = document.createElement("td");
+                    statusCell.innerHTML = data[i].status;
+                    row.appendChild(ipCell);
+                    row.appendChild(portCell);
+                    row.appendChild(playerCountCell);
+                    row.appendChild(maxCapacityCell);
+                    row.appendChild(statusCell);
+                    document.getElementById("server-list").appendChild(row);
+                }
+            }
+        };
+        xhr.open("GET", "/admin-panel", true);
+        xhr.send();
+    };
+</script>
+</body>
+</html>
