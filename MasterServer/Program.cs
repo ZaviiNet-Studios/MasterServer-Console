@@ -536,39 +536,40 @@ namespace MasterServer
 
         private static bool ValidateRequest(string playfabID)
         {
-            var adminAPISettings = new PlayFabApiSettings()
-            {
-                TitleId = Settings.PlayFabTitleID,
-                DeveloperSecretKey = Settings.DeveloperSecretKey
-            };
-            
-            var authenticationApi = new PlayFabAdminInstanceAPI(adminAPISettings);
-            
-            
-            Console.WriteLine("Validating Player " + playfabID);
+            if (!Settings.UsePlayFab) return true;
+                var adminAPISettings = new PlayFabApiSettings()
+                {
+                    TitleId = Settings.PlayFabTitleID,
+                    DeveloperSecretKey = Settings.DeveloperSecretKey
+                };
+
+                var authenticationApi = new PlayFabAdminInstanceAPI(adminAPISettings);
 
 
-            var request = new GetUserBansRequest()
-            {
-                PlayFabId = playfabID
-            };
+                Console.WriteLine("Validating Player " + playfabID);
 
-            Task<PlayFabResult<GetUserBansResult>> task = authenticationApi.GetUserBansAsync(request);
-            task.Wait();
 
-            var response = task.Result;
-            
-            
-            var isBanned = response.Result.BanData.Count;
-            
-            Console.WriteLine($"Player has {isBanned} Ban(s) on Record");
-            
-            if (isBanned > 0)
-            {
-                return false;
-            }
+                var request = new GetUserBansRequest()
+                {
+                    PlayFabId = playfabID
+                };
 
-            return true;
+                Task<PlayFabResult<GetUserBansResult>> task = authenticationApi.GetUserBansAsync(request);
+                task.Wait();
+
+                var response = task.Result;
+
+
+                var isBanned = response.Result.BanData.Count;
+
+                Console.WriteLine($"Player has {isBanned} Ban(s) on Record");
+
+                if (isBanned > 0)
+                {
+                    return false;
+                }
+
+                return true;
 
         }
         
