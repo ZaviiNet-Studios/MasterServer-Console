@@ -248,7 +248,7 @@ namespace MasterServer
                     DockerContainerImageTag = "latest",
                     DockerHost = "unix:///var/run/docker.sock",
                     DockerNetwork = "bridge",
-                    DockerTcpNetwork = "tcp://localhost:2376",
+                    DockerTcpNetwork = "tcp://localhost:2375",
                     DockerContainerAutoRemove = true,
                     DockerContainerAutoStart = true,
                     DockerContainerAutoUpdate = true,
@@ -312,9 +312,8 @@ namespace MasterServer
             HttpListener httpListener = new HttpListener();
 
             // Add the prefixes to the listener
-            httpListener.Prefixes.Add($"http://*:{WebPort}/");
-            
-            
+            httpListener.Prefixes.Add($"http://localhost:{WebPort}/");
+
 
             // Start the listener
             httpListener.Start();
@@ -322,11 +321,11 @@ namespace MasterServer
             while (true)
             {
                 // Wait for a request to come in
-                HttpListenerContext context = httpListener.GetContext();
+                var context = httpListener.GetContext();
 
                 // Get the request and response objects
-                HttpListenerRequest request = context.Request;
-                HttpListenerResponse response = context.Response;
+                var request = context.Request;
+                var response = context.Response;
 
 
                 // Get the request URL
