@@ -126,6 +126,10 @@ The console application uses the .NET HTTPClient library to make API requests. E
 
 - [@ZaviiNet](https://github.com/ZaviiNet)
 
+## Contributors
+
+- [@verlox][https://github.com/verlox)
+
 
 
 
