@@ -73,11 +73,11 @@ To run this project, you will need to add the following environment variables to
 
 `CreateStandbyGameServers`: Create game servers in standby to handle incoming player connections.
 
-'UsePlayFab' : by Default Validating Playfab is disabled set it to true and enter in your TitleID and Dev Key.
+`UsePlayFab` : by Default Validating Playfab is disabled set it to true and enter in your TitleID and Dev Key.
 
-'PlayFabTitleID' : Fill your Title ID Here
+`PlayFabTitleID` : Fill your Title ID Here
 
-'DeveloperSecretKey' : Add Secret Key
+`DeveloperSecretKey` : Add Secret Key
 
 # Usage
 
