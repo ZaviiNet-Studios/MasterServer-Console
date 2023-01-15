@@ -1,4 +1,5 @@
-﻿using Docker.DotNet;
+﻿using System.Diagnostics;
+using Docker.DotNet;
 using Docker.DotNet.Models;
 using Newtonsoft.Json;
 using PlayFab;
@@ -22,7 +23,7 @@ namespace MasterServer
         private static readonly string? DefaultIp = Settings.MasterServerIp;
         private static int _portPool = Settings.GameServerPortPool;
 
-        
+
         public static void Main(string[] args)
         {
 
@@ -42,19 +43,13 @@ namespace MasterServer
 
             List<GameServer> gameServers = new List<GameServer>();
 
-            new Thread(() =>
-            {
-                ListenForServers(gameServers);
-            }).Start();
-            new Thread(() =>
-            {
-                ListenForHttpRequestsAsync(gameServers);
-            }).Start();
-            
+            new Thread(() => { ListenForServers(gameServers); }).Start();
+            new Thread(() => { ListenForHttpRequestsAsync(gameServers); }).Start();
+
 
             int partySize = 0;
-            CreateInitialGameServers(gameServers,null,null,partySize);
-            
+            CreateInitialGameServers(gameServers, null, null, partySize);
+
             PlayFabAdminAPI.ForgetAllCredentials();
             while (true)
             {
@@ -92,9 +87,9 @@ namespace MasterServer
                         string addIpAddress = Console.ReadLine() ?? "";
                         Console.WriteLine("Enter the port of the game server:");
                         int addPort = int.Parse(Console.ReadLine() ?? "");
-                        
+
                         CreateGameServers(gameServers, addIpAddress, addPort.ToString(), 0);
-                       
+
                         Console.WriteLine(
                             $"Added game server at {addIpAddress}:{addPort} with InstanceID");
                         break;
@@ -123,6 +118,7 @@ namespace MasterServer
                             Console.WriteLine(
                                 $"[{server.instanceId}] {server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})");
                         }
+
                         break;
                     case "overwrite":
                         //overwrite player count
@@ -134,23 +130,25 @@ namespace MasterServer
                         if (gameServer != null)
                         {
                             gameServer.playerCount = overwritePlayerCount;
-                            Console.WriteLine($"Overwrote player count of game server at port {overwritePort} to {overwritePlayerCount}.");
+                            Console.WriteLine(
+                                $"Overwrote player count of game server at port {overwritePort} to {overwritePlayerCount}.");
                         }
                         else
                         {
                             Console.WriteLine($"Game server at port {overwritePort} not found.");
                         }
+
                         break;
                 }
             }
         }
-        
+
         private static async Task DeleteExistingDockerContainers()
         {
             string endpoint = $"{Settings.DockerTcpNetwork}";
 
             var client = new DockerClientConfiguration(new Uri(endpoint)).CreateClient();
-            
+
             var containers = client.Containers.ListContainersAsync(new ContainersListParameters()
             {
                 All = true
@@ -181,7 +179,8 @@ namespace MasterServer
             }
         }
 
-        private static void CreateInitialGameServers(List<GameServer> gameServers,string ip, string port, int partySize)
+        private static void CreateInitialGameServers(List<GameServer> gameServers, string ip, string port,
+            int partySize)
         {
             var gameServersToBeCreated = InitialServers.numServers;
             var gameServersCreated = 0;
@@ -193,25 +192,26 @@ namespace MasterServer
                 if (gameServersCreated < gameServersToBeCreated)
                 {
                     CreateDockerContainer(gameServers, ip, port, out InstancedID, out serverID);
-                    CreateNewServer(gameServers,ip,port, InstancedID, serverID);
+                    CreateNewServer(gameServers, ip, port, InstancedID, serverID);
                     gameServersCreated++;
                 }
                 else
                 {
-                    Console.WriteLine($"Initial game servers created successfully - Number Created = {0} {gameServersCreated}");
+                    Console.WriteLine(
+                        $"Initial game servers created successfully - Number Created = {0} {gameServersCreated}");
                     break;
                 }
             }
         }
-        
-        private static void CreateGameServers(List<GameServer> gameServers,string ip, string port, int partySize)
+
+        private static void CreateGameServers(List<GameServer> gameServers, string ip, string port, int partySize)
         {
             var gameServersToBeCreated = InitialServers.numServers;
             var InstancedID = String.Empty;
             string serverID;
-            
-            CreateDockerContainer(gameServers,ip,port, out InstancedID, out serverID);
-            CreateNewServer(gameServers,ip,port, InstancedID, serverID);
+
+            CreateDockerContainer(gameServers, ip, port, out InstancedID, out serverID);
+            CreateNewServer(gameServers, ip, port, InstancedID, serverID);
         }
 
         private static GameServers? InitialDockerContainerSettings()
@@ -354,27 +354,30 @@ namespace MasterServer
                                 responseString = "[";
                                 foreach (GameServer server in gameServers)
                                 {
-                                    
+
                                     string population;
-                                    
-                                    if (server.playerCount >= server.maxCapacity*0.8) population = "High";
-                                    else if (server.playerCount >= server.maxCapacity*0.5) population = "Medium";
+
+                                    if (server.playerCount >= server.maxCapacity * 0.8) population = "High";
+                                    else if (server.playerCount >= server.maxCapacity * 0.5) population = "Medium";
                                     else population = "Low";
-                                    
-                                    
-                                    
+
+
+
                                     if (!server.isActive) continue;
                                     string serverStatus;
                                     if (server.playerCount == server.maxCapacity)
                                         serverStatus = "full";
                                     else
                                         serverStatus = "active";
-                                    
+
                                     responseString += "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" +
                                                       server.port + ",\"playerCount\":" + server.playerCount +
-                                                      ",\"maxCapacity\":" + server.maxCapacity + ",\"status\":\"" + serverStatus + "\",\"serverID\":\"" + server.ServerId + "\",\"population\":\""+ population +"\"},\n";
-                                    
+                                                      ",\"maxCapacity\":" + server.maxCapacity + ",\"status\":\"" +
+                                                      serverStatus + "\",\"serverID\":\"" + server.ServerId +
+                                                      "\",\"population\":\"" + population + "\"},\n";
+
                                 }
+
                                 responseString = responseString.TrimEnd(',', '\n') + "]";
                                 responseBytes = Encoding.UTF8.GetBytes(responseString);
                                 response.ContentLength64 = responseBytes.Length;
@@ -388,7 +391,7 @@ namespace MasterServer
 #pragma warning disable CS8600
 #pragma warning disable CS8604
                                 Stream resourceStream =
-                                assembly.GetManifestResourceStream("MasterServer.servers.html");
+                                    assembly.GetManifestResourceStream("MasterServer.servers.html");
                                 using (StreamReader reader = new StreamReader(resourceStream))
                                 {
                                     // Read the contents of the HTML file
@@ -418,6 +421,7 @@ namespace MasterServer
                                                       server.port + ",\"playerCount\":" + server.playerCount +
                                                       ",\"maxCapacity\":" + server.maxCapacity + "}\n";
                                 }
+
                                 responseBytes = Encoding.UTF8.GetBytes(responseString);
                                 response.ContentLength64 = responseBytes.Length;
                                 response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
@@ -435,6 +439,7 @@ namespace MasterServer
                                                          ",\"maxCapacity\":" + server.maxCapacity + "}";
                                     }
                                 }
+
                                 responseBytes = Encoding.UTF8.GetBytes(responseString);
                                 response.ContentLength64 = responseBytes.Length;
                                 response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
@@ -447,10 +452,11 @@ namespace MasterServer
                                     string partySizeString = request.QueryString["partySize"] ?? "";
                                     int partySize = int.Parse(partySizeString);
                                     string playfabId = request.QueryString["playfabId"] ?? "";
-                                    Console.WriteLine($"Request from IP: {request.RemoteEndPoint} with party size: {partySize} {playfabId}");
+                                    Console.WriteLine(
+                                        $"Request from IP: {request.RemoteEndPoint} with party size: {partySize} {playfabId}");
 
                                     ValidateRequest(playfabId);
-                                    
+
                                     // Validate token with PlayFab
                                     bool isPlayerBanned = ValidateRequest(playfabId);
 
@@ -474,21 +480,24 @@ namespace MasterServer
                                                 playfabId + "\"}";
                                             availableServer.playerCount += partySize;
 
-                                            Console.WriteLine($"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}");
-                                            
+                                            Console.WriteLine(
+                                                $"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}");
+
                                         }
                                         else
                                         {
                                             responseString = "No available game servers";
                                         }
-                                        
+
                                     }
                                     else
                                     {
                                         var instancedID = string.Empty;
                                         string serverID;
-                                        CreateDockerContainer(gameServers, string.Empty,string.Empty, out instancedID, out serverID);
-                                        GameServer newServer = CreateNewServer(gameServers, string.Empty,string.Empty, instancedID, serverID);
+                                        CreateDockerContainer(gameServers, string.Empty, string.Empty, out instancedID,
+                                            out serverID);
+                                        GameServer newServer = CreateNewServer(gameServers, string.Empty, string.Empty,
+                                            instancedID, serverID);
                                         if (newServer != null)
                                         {
                                             responseString =
@@ -500,6 +509,7 @@ namespace MasterServer
                                             responseString = "Error creating new server";
                                         }
                                     }
+
                                     responseBytes = Encoding.UTF8.GetBytes(responseString);
                                     response.ContentLength64 = responseBytes.Length;
                                     response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
@@ -512,8 +522,10 @@ namespace MasterServer
                                     response.ContentLength64 = responseBytes.Length;
                                     response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                                 }
+
                                 break;
                         }
+
                         break;
 
                     case "POST":
@@ -525,7 +537,7 @@ namespace MasterServer
                         // Update the game servers list with the new data
                         gameServers.Add(new GameServer(requestData["ipAddress"], int.Parse(requestData["port"]),
                             int.Parse(requestData["playerCount"]), int.Parse(requestData["maxCapacity"]),
-                            requestData["instanceId"], true, requestData["serverId"]) );
+                            requestData["instanceId"], true, requestData["serverId"]));
 
                         // Send a response to the server
                         string responseBody = "Received data from game server\n";
@@ -540,44 +552,45 @@ namespace MasterServer
         private static bool ValidateRequest(string playfabID)
         {
             if (!Settings.UsePlayFab) return true;
-                var adminAPISettings = new PlayFabApiSettings()
-                {
-                    TitleId = Settings.PlayFabTitleID,
-                    DeveloperSecretKey = Settings.DeveloperSecretKey
-                };
+            var adminAPISettings = new PlayFabApiSettings()
+            {
+                TitleId = Settings.PlayFabTitleID,
+                DeveloperSecretKey = Settings.DeveloperSecretKey
+            };
 
-                var authenticationApi = new PlayFabAdminInstanceAPI(adminAPISettings);
-
-
-                Console.WriteLine("Validating Player " + playfabID);
+            var authenticationApi = new PlayFabAdminInstanceAPI(adminAPISettings);
 
 
-                var request = new GetUserBansRequest()
-                {
-                    PlayFabId = playfabID
-                };
-
-                Task<PlayFabResult<GetUserBansResult>> task = authenticationApi.GetUserBansAsync(request);
-                task.Wait();
-
-                var response = task.Result;
+            Console.WriteLine("Validating Player " + playfabID);
 
 
-                var isBanned = response.Result.BanData.Count;
+            var request = new GetUserBansRequest()
+            {
+                PlayFabId = playfabID
+            };
 
-                Console.WriteLine($"Player has {isBanned} Ban(s) on Record");
+            Task<PlayFabResult<GetUserBansResult>> task = authenticationApi.GetUserBansAsync(request);
+            task.Wait();
 
-                if (isBanned > 0)
-                {
-                    return false;
-                }
+            var response = task.Result;
 
-                return true;
+
+            var isBanned = response.Result.BanData.Count;
+
+            Console.WriteLine($"Player has {isBanned} Ban(s) on Record");
+
+            if (isBanned > 0)
+            {
+                return false;
+            }
+
+            return true;
 
         }
-        
+
         //Server Creation Stuff
-        private static GameServer CreateNewServer(List<GameServer> gameServers, string ip,string port, string InstancedID, string serverID)
+        private static GameServer CreateNewServer(List<GameServer> gameServers, string ip, string port,
+            string InstancedID, string serverID)
         {
             var serverIP = DefaultIp;
             var serverPort = _portPool;
@@ -585,19 +598,22 @@ namespace MasterServer
             {
                 serverIP = ip;
             }
+
             if (!string.IsNullOrEmpty(port))
             {
                 serverPort = Convert.ToInt32(port);
             }
-            var gameServer = new GameServer(serverIP, serverPort, 0, Settings.MaxPlayersPerServer, InstancedID, true,serverID);
-            
-            gameServer.ServerId = Guid.NewGuid().ToString();
+
+            var gameServer = new GameServer(serverIP, serverPort, 0, Settings.MaxPlayersPerServer, InstancedID, true,
+                serverID);
+
             gameServers.Add(gameServer);
             _portPool++;
             return gameServer;
         }
 
-        private static void CreateDockerContainer(List<GameServer> gameServers,string? ip, string? port, out string InstancedID, out string ServerID)
+        private static void CreateDockerContainer(List<GameServer> gameServers, string? ip, string? port,
+            out string InstancedID, out string ServerID)
         {
             var randomGuid = Guid.NewGuid().ToString();
             ServerID = randomGuid;
@@ -609,11 +625,12 @@ namespace MasterServer
             {
                 HostIP = ip;
             }
+
             if (!string.IsNullOrEmpty(port))
             {
                 HostPort = Convert.ToInt32(port);
             }
-            
+
             Console.WriteLine($"New Server Requested with IP {HostIP} and Port {HostPort}");
 
             if (Settings.AllowServerCreation)
@@ -628,37 +645,49 @@ namespace MasterServer
                     // Set the image name and tag to use for the new container
                     string imageName = $"{Settings.DockerContainerImage}";
                     string imageTag = $"{Settings.DockerContainerImageTag}";
-                    
+
+                    var host = Dns.GetHostName();
+                    var addresses = Dns.GetHostAddresses(host);
+                    var ipv4Address = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
+
                     // Create a new container using the image name and tag, and the specified command
-                    CreateContainerResponse createResponse = client.Containers.CreateContainerAsync(new CreateContainerParameters
-                    {
-                        Image = imageName + ":" + imageTag,
-                        Name = $"GameServer-Instance--{_numServers}",
-                        Hostname = HostIP,
-                        Env = new List<string> { $"Server-ID={randomGuid}" },
-                        ExposedPorts = new Dictionary<string, EmptyStruct>
+                    CreateContainerResponse createResponse = client.Containers.CreateContainerAsync(
+                        new CreateContainerParameters
                         {
-                            {"7777/udp", default(EmptyStruct)}
-                        },
-                        HostConfig = new HostConfig
-                        {
-                            PortBindings = new Dictionary<string, IList<PortBinding>>
+                            Image = imageName + ":" + imageTag,
+                            Name = $"GameServer-Instance--{_numServers}",
+                            Hostname = HostIP,
+                            Env = new List<string>
                             {
-                                { "7777/udp", new List<PortBinding> { new PortBinding { HostPort = HostPort+"/udp" } } },
+                                $"Server-ID={randomGuid}",
+                                $"IP-Address={ipv4Address}"
+                            },
+                            ExposedPorts = new Dictionary<string, EmptyStruct>
+                            {
+                                { "7777/udp", default(EmptyStruct) }
+                            },
+                            HostConfig = new HostConfig
+                            {
+                                PortBindings = new Dictionary<string, IList<PortBinding>>
+                                {
+                                    {
+                                        "7777/udp",
+                                        new List<PortBinding> { new PortBinding { HostPort = HostPort + "/udp" } }
+                                    },
+                                }
                             }
-                        }
-                    }).Result;
+                        }).Result;
 
                     // Get the ID of the new container
                     string containerId = createResponse.ID;
                     newInstancedID = containerId;
-                    
+
 
                     // Start the new container
                     client.Containers.StartContainerAsync(containerId, null).Wait();
                     _numServers++;
-                    
-                    Console.WriteLine($"New Server Created with ID {newInstancedID}");
+
+                    Console.WriteLine($"New Server Created with ID {ServerID}");
                 }
                 else
                 {
@@ -689,6 +718,7 @@ namespace MasterServer
                         _ = DeleteDockerContainer(gameServers, server.instanceId);
                     }
                 }
+
                 gameServers.RemoveAll(server => server.playerCount == 0);
             }
         }
@@ -696,13 +726,13 @@ namespace MasterServer
         private static async Task DeleteDockerContainerByPort(List<GameServer> gameServers, int port)
         {
             string endpointUrl = $"{Settings.DockerTcpNetwork}";
-            
+
             // Create a new DockerClient using the endpoint URL
             DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-            
+
             // Get the ID of the container to delete
             string? containerId = gameServers.Find(server => server.port == port)?.instanceId;
-            
+
             // Delete the container
             try
             {
@@ -718,10 +748,10 @@ namespace MasterServer
         private static async Task StopAllDockerContainers(List<GameServer> gameServers)
         {
             string endpointUrl = $"{Settings.DockerTcpNetwork}";
-            
+
             // Create a new DockerClient using the endpoint URL
             DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-            
+
             var containers = client.Containers.ListContainersAsync(new ContainersListParameters()
             {
                 All = true
@@ -752,13 +782,14 @@ namespace MasterServer
         private static async Task StartAllDockerContainers(List<GameServer> gameServers)
         {
             string endpointUrl = $"{Settings.DockerTcpNetwork}";
-            
+
             DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-            
-            IList<ContainerListResponse> containers = client.Containers.ListContainersAsync(new ContainersListParameters()
-            {
-                All = true
-            }).Result;
+
+            IList<ContainerListResponse> containers = client.Containers.ListContainersAsync(
+                new ContainersListParameters()
+                {
+                    All = true
+                }).Result;
 
             try
             {
@@ -812,10 +843,11 @@ namespace MasterServer
                     Console.WriteLine($"Error stopping container: {ex.Message}");
                 }
             }
+
             return Task.CompletedTask;
         }
 
-        private static async Task ListenForServers(List<GameServer> gameServers)
+        private static async void ListenForServers(List<GameServer> gameServers)
         {
             // Create a TCP listener
             var listener = new TcpListener(IPAddress.Any, Port);
@@ -828,63 +860,78 @@ namespace MasterServer
 
                 // Read the data sent by the game server
                 var stream = client.GetStream();
-                var data = new byte[1024];
-                var bytesRead = stream.Read(data, 0, data.Length);
-                var dataString = Encoding.ASCII.GetString(data, 0, bytesRead);
+                var reader = new StreamReader(stream);
+                var data = reader.ReadToEnd();
 
-                // Check for and remove any headers
+                // Deserialize the JSON data into a dynamic object
+                dynamic values = JsonConvert.DeserializeObject(data);
+                
+                var json = JsonConvert.DeserializeObject<Dictionary<string, string>>(data);
+                Debug.WriteLine($"Received data from {json}");
 
-                if (dataString.Contains("Content-Length:"))
+                // Extract the server ID and player count from the dynamic object
+                var serverID = values.serverID;
+                var playerCount = values.playerCount;
+
+                // Find the game server with the matching server ID
+                var gameServer = gameServers.Find(server => server.ServerId == (string)values["serverID"]);
+
+                if (gameServer == null)
                 {
-                    int contentLength =
-                        int.Parse(dataString.Substring(
-                            dataString.IndexOf("Content-Length:") + 16, 3));
-                    dataString = dataString.Substring(dataString.IndexOf("\r\n\r\n") + 4,
-                        contentLength);
-                }
-
-
-                // Split the data into separate values
-                Dictionary<string, string> values = dataString.Split('&')
-                    .Select(s => s.Split('='))
-                    .ToDictionary(a => a[0], a => a[1]);
-                if (!values.ContainsKey("ipAddress") || !values.ContainsKey("port") ||
-                    !values.ContainsKey("playerCount") || !values.ContainsKey("maxCapacity"))
-                {
-                    Console.WriteLine($"Received invalid data from game server: {dataString} (Expected format: ipAddress=127.0.0.1&port=7777&playerCount=0&maxCapacity=50)");
+                    Console.WriteLine($"Received data from unknown game server: {serverID}");
                     continue;
                 }
 
-                string ipAddress = values["ipAddress"];
-                int port = int.Parse(values["port"]);
-                int playerCount = int.Parse(values["playerCount"]);
-                int maxCapacity = int.Parse(values["maxCapacity"]);
-                string instanceId;
-                string serverId;
+                // Update the game server's player count
+                gameServer.playerCount = playerCount;
 
-                // Check if the game server is already in the list
-                GameServer? gameServer = gameServers.Find(server => server.ipAddress == ipAddress && server.port == port);
-                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                if (gameServer == null)
-                {
-                    if (gameServers.Count < Settings.MaxGameServers)
-                    {
-                        CreateDockerContainer(gameServers, ipAddress, port.ToString(), out instanceId, out serverId);
-                        CreateNewServer(gameServers, ipAddress,port.ToString(), instanceId, serverId);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Maximum number of game servers reached");
-                    }
+                Console.WriteLine($"Received data from game server {serverID}: {playerCount} players");
 
-                }
-                else
-                {
-                    // If in the list, update its player count
-                    gameServer.playerCount = playerCount;
-                }
+                // Close the connection with the game server
+                client.Close();
             }
         }
     }
 }
+
+
+// // Split the data into separate values
+                // Dictionary<string, string> values = dataString.Split('&')
+                //     .Select(s => s.Split('='))
+                //     .ToDictionary(a => a[0], a => a[1]);
+                // if (!values.ContainsKey("ipAddress") || !values.ContainsKey("port") ||
+                //     !values.ContainsKey("playerCount") || !values.ContainsKey("maxCapacity"))
+                // {
+                //     Console.WriteLine($"Received invalid data from game server: {dataString} (Expected format: ipAddress=127.0.0.1&port=7777&playerCount=0&maxCapacity=50)");
+                //     continue;
+                // }
+                //
+                // string ipAddress = values["ipAddress"];
+                // int port = int.Parse(values["port"]);
+                // int playerCount = int.Parse(values["playerCount"]);
+                // int maxCapacity = int.Parse(values["maxCapacity"]);
+                // string instanceId;
+                // string serverId;
+                //
+                // // Check if the game server is already in the list
+                // GameServer? gameServer = gameServers.Find(server => server.ipAddress == ipAddress && server.port == port);
+                // // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                // if (gameServer == null)
+                // {
+                //     if (gameServers.Count < Settings.MaxGameServers)
+                //     {
+                //         CreateDockerContainer(gameServers, ipAddress, port.ToString(), out instanceId, out serverId);
+                //         CreateNewServer(gameServers, ipAddress,port.ToString(), instanceId, serverId);
+                //     }
+                //     else
+                //     {
+                //         Console.WriteLine("Maximum number of game servers reached");
+                //     }
+                //
+                // }
+                // else
+                // {
+                //     // If in the list, update its player count
+                //     gameServer.playerCount = playerCount;
+                // }
                
