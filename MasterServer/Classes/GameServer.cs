@@ -10,14 +10,15 @@ public class GameServer
     public string ServerId { get; set; }
     public string instanceId { get; set; }
 
-    public GameServer(string ipAddress, int port, int playerCount, int maxCapacity, string instanceId, bool isActive)
+    public GameServer(string ipAddress, int port, int playerCount, int maxCapacity, string instanceId, bool isActive, string serverId)
     {
-        this.instanceId = instanceId;
         this.ipAddress = ipAddress;
         this.port = port;
         this.playerCount = playerCount;
         this.maxCapacity = maxCapacity;
+        this.instanceId = instanceId;
         this.isActive = isActive;
+        this.ServerId = serverId;
     }
 
     public GameServer()
