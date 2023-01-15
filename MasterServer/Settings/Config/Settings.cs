@@ -2,17 +2,17 @@
 {
     public class Settings
     {
-        public Settings(bool createInitialGameServers = default, int numberofInitialGameServers = default, bool createStandbyGameServers = default, string dockerContainerImage = null, string dockerContainerImageTag = null, string dockerHost = null, string dockerNetwork = null,
-            string dockerTcpNetwork = null, bool dockerContainerAutoRemove = default,
+        public Settings(bool createInitialGameServers = default, int numberofInitialGameServers = default, bool createStandbyGameServers = default, string? dockerContainerImage = null, string? dockerContainerImageTag = null, string? dockerHost = null, string? dockerNetwork = null,
+            string? dockerTcpNetwork = null, bool dockerContainerAutoRemove = default,
             bool dockerContainerAutoStart = default, bool dockerContainerAutoUpdate = default,
-            string masterServerIp = null, int masterServerWebPort = default, int masterServerApiPort = default,
-            int masterServerPort = default, string masterServerName = null, string masterServerPassword = null,
+            string? masterServerIp = null, int masterServerWebPort = default, int masterServerApiPort = default,
+            int masterServerPort = default, string? masterServerName = null, string? masterServerPassword = null,
             int maxGameServers = default, int maxPlayers = default, int maxPartyMembers = default, int maxPlayersPerServer = default,
             bool allowServerCreation = default, bool allowServerDeletion = default, bool allowServerJoining = default,
             bool serverRestartOnCrash = default, bool serverRestartOnShutdown = default,
             bool serverRestartOnUpdate = default, bool serverRestartSchedule = default,
-            string serverRestartScheduleTime = null, int gameServerPortPool = default,
-            bool gameServerRandomPorts = default, string playFabTitleID = null, string developerSecretKey = null)
+            string? serverRestartScheduleTime = null, int gameServerPortPool = default,
+            bool gameServerRandomPorts = default, string? playFabTitleID = null, string? developerSecretKey = null)
         {
             CreateInitialGameServers = createInitialGameServers;
             NumberofInitialGameServers = numberofInitialGameServers;
@@ -49,25 +49,25 @@
             DeveloperSecretKey = developerSecretKey;
         }
 
-        public string DockerContainerImage { get; set; }
+        public string? DockerContainerImage { get; set; }
         
-        public string DockerContainerImageTag { get; set; }
-        public string DockerHost { get; set; } 
-        public string DockerNetwork { get; set; }
-        public string DockerTcpNetwork { get; set; }
+        public string? DockerContainerImageTag { get; set; }
+        public string? DockerHost { get; set; } 
+        public string? DockerNetwork { get; set; }
+        public string? DockerTcpNetwork { get; set; }
         public bool DockerContainerAutoRemove { get; set; }
         public bool DockerContainerAutoStart { get; set; }
         public bool DockerContainerAutoUpdate { get; set; }
         
         public int NumberofInitialGameServers { get; set; }
 
-        public string MasterServerIp { get; set; }
+        public string? MasterServerIp { get; set; }
         public int MasterServerWebPort { get; set; }
         public int MasterServerApiPort { get; set; }
         public int MasterServerPort { get; set; }
 
-        public string MasterServerName { get; set; }
-        public string MasterServerPassword { get; set; }
+        public string? MasterServerName { get; set; }
+        public string? MasterServerPassword { get; set; }
 
         public int MaxGameServers { get; set; }
         public int MaxPlayers { get; set; }
@@ -80,14 +80,14 @@
         public bool ServerRestartOnShutdown { get; set; }
         public bool ServerRestartOnUpdate { get; set; }
         public bool ServerRestartSchedule { get; set; }
-        public string ServerRestartScheduleTime { get; set; } 
+        public string? ServerRestartScheduleTime { get; set; } 
         public int GameServerPortPool { get; set; }
         public bool GameServerRandomPorts { get; set; }
         
         public bool CreateInitialGameServers { get; set; }
         public bool CreateStandbyGameServers { get; set; }
         
-        public string PlayFabTitleID { get; set; }
-        public string DeveloperSecretKey { get; set; }
+        public string? PlayFabTitleID { get; set; }
+        public string? DeveloperSecretKey { get; set; }
     }
 }
