@@ -128,7 +128,7 @@ The console application uses the .NET HTTPClient library to make API requests. E
 
 ## Contributors
 
-- [@verlox][https://github.com/verlox)
+- [@verlox](https://github.com/verlox)
 
 
 
