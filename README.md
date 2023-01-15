@@ -72,6 +72,13 @@ To run this project, you will need to add the following environment variables to
 `CreateInitialGameServers`: Create game servers when the application starts.
 
 `CreateStandbyGameServers`: Create game servers in standby to handle incoming player connections.
+
+'UsePlayFab' : by Default Validating Playfab is disabled set it to true and enter in your TitleID and Dev Key.
+
+'PlayFabTitleID' : Fill your Title ID Here
+
+'DeveloperSecretKey' : Add Secret Key
+
 # Usage
 
 To use the console application, navigate to the directory where the executable is located and run it from the command line or just open the exe. The application will wait for you to enter a command. Available commands include:
