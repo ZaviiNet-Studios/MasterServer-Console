@@ -7,16 +7,16 @@ public class GameServer
     public int port { get; set; }
     public int playerCount { get; set; }
     public int maxCapacity { get; set; }
-    
+    public string ServerId { get; set; }
     public string instanceId { get; set; }
 
     public GameServer(string ipAddress, int port, int playerCount, int maxCapacity, string instanceId, bool isActive)
     {
+        this.instanceId = instanceId;
         this.ipAddress = ipAddress;
         this.port = port;
         this.playerCount = playerCount;
         this.maxCapacity = maxCapacity;
-        this.instanceId = instanceId;
         this.isActive = isActive;
     }
 
@@ -28,5 +28,6 @@ public class GameServer
         playerCount = 0;
         maxCapacity = 0;
         instanceId = "";
+        ServerId = "";
     }
 }
