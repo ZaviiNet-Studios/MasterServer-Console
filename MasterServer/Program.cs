@@ -273,7 +273,10 @@ namespace MasterServer
                     ServerRestartSchedule = true,
                     ServerRestartScheduleTime = "00:00",
                     GameServerPortPool = 5100,
-                    GameServerRandomPorts = false
+                    GameServerRandomPorts = false,
+                    UsePlayFab = false,
+                    PlayFabTitleID = null,
+                    DeveloperSecretKey = null,
                 };
                 string json = JsonConvert.SerializeObject(defaultSettings, Formatting.Indented);
 
