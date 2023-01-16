@@ -132,7 +132,7 @@ The console application uses the .NET HTTPClient library to make API requests. E
 ## Authors
 
 - [@ZaviiNet](https://github.com/ZaviiNet)
-- [@GTextreme169](https://github.com/GTextreme169
+- [@GTextreme169](https://github.com/GTextreme169)
 
 ## Contributors
 
