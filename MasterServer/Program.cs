@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using PlayFab;
 using PlayFab.AdminModels;
 using ServerCommander.Classes;
+using ServerCommander.Settings.Config;
 
 #pragma warning disable CS1998
 
@@ -18,7 +19,7 @@ namespace ServerCommander
     class Program
     {
         private static int _numServers;
-        private static readonly Settings.Config.Settings Settings = LoadSettings();
+        private static readonly MasterServerSettings Settings = MasterServerSettings.GetFromDisk();
         private static readonly GameServers? InitialServers = InitialDockerContainerSettings();
         private static readonly int Port = Settings.MasterServerPort;
         private static readonly int WebPort = Settings.MasterServerApiPort;
@@ -253,61 +254,6 @@ namespace ServerCommander
             {
                 var json = File.ReadAllText(filepath);
                 return JsonConvert.DeserializeObject<GameServers>(json);
-            }
-        }
-
-        private static Settings.Config.Settings LoadSettings()
-        {
-            string filePath = "config/settings.json";
-
-            if (!File.Exists(filePath))
-            {
-                Settings.Config.Settings defaultSettings = new Settings.Config.Settings
-                {
-                    CreateInitialGameServers = true,
-                    CreateStandbyGameServers = false,
-                    DockerContainerImage = "alpine",
-                    DockerContainerImageTag = "latest",
-                    DockerHost = "unix:///var/run/docker.sock",
-                    DockerNetwork = "bridge",
-                    DockerTcpNetwork = "tcp://localhost:2375",
-                    DockerContainerAutoRemove = true,
-                    DockerContainerAutoStart = true,
-                    DockerContainerAutoUpdate = true,
-                    MasterServerIp = "localhost",
-                    MasterServerWebPort = 80,
-                    MasterServerApiPort = 8080,
-                    MasterServerPort = 13000,
-                    MasterServerName = "Master Server Instance",
-                    MasterServerPassword = "password",
-                    MaxGameServers = 100,
-                    MaxPlayers = 10000,
-                    MaxPlayersPerServer = 50,
-                    MaxPartyMembers = 5,
-                    AllowServerCreation = true,
-                    AllowServerDeletion = true,
-                    AllowServerJoining = true,
-                    ServerRestartOnCrash = true,
-                    ServerRestartOnShutdown = false,
-                    ServerRestartOnUpdate = false,
-                    ServerRestartSchedule = true,
-                    ServerRestartScheduleTime = "00:00",
-                    GameServerPortPool = 5100,
-                    GameServerRandomPorts = false,
-                    UsePlayFab = false,
-                    PlayFabTitleID = null,
-                    DeveloperSecretKey = null,
-                };
-                string json = JsonConvert.SerializeObject(defaultSettings, Formatting.Indented);
-
-                Directory.CreateDirectory("config");
-                File.WriteAllText(filePath, json);
-                return defaultSettings;
-            }
-            else
-            {
-                string json = File.ReadAllText(filePath);
-                return JsonConvert.DeserializeObject<Settings.Config.Settings>(json) ?? new Settings.Config.Settings();
             }
         }
 

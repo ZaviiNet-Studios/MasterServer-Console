@@ -1,8 +1,12 @@
-﻿namespace ServerCommander.Settings.Config
+﻿using Newtonsoft.Json;
+
+namespace ServerCommander.Settings.Config
 {
-    public class Settings
+    public class MasterServerSettings
     {
-        public Settings(bool createInitialGameServers = default, int numberofInitialGameServers = default, bool createStandbyGameServers = default, string? dockerContainerImage = null, string? dockerContainerImageTag = null, string? dockerHost = null, string? dockerNetwork = null,
+        public const string DefaultFilePath = "config/settings.json";
+        
+        public MasterServerSettings(bool createInitialGameServers = default, int numberofInitialGameServers = default, bool createStandbyGameServers = default, string? dockerContainerImage = null, string? dockerContainerImageTag = null, string? dockerHost = null, string? dockerNetwork = null,
             string? dockerTcpNetwork = null, bool dockerContainerAutoRemove = default,
             bool dockerContainerAutoStart = default, bool dockerContainerAutoUpdate = default,
             string? masterServerIp = null, int masterServerWebPort = default, int masterServerApiPort = default,
@@ -48,6 +52,62 @@
             UsePlayFab = usePlayFab;
             PlayFabTitleID = playFabTitleID;
             DeveloperSecretKey = developerSecretKey;
+        }
+        
+        public static MasterServerSettings Default => new MasterServerSettings
+        {
+            CreateInitialGameServers = true,
+            CreateStandbyGameServers = false,
+            DockerContainerImage = "alpine",
+            DockerContainerImageTag = "latest",
+            DockerHost = "unix:///var/run/docker.sock",
+            DockerNetwork = "bridge",
+            DockerTcpNetwork = "tcp://localhost:2375",
+            DockerContainerAutoRemove = true,
+            DockerContainerAutoStart = true,
+            DockerContainerAutoUpdate = true,
+            MasterServerIp = "localhost",
+            MasterServerWebPort = 80,
+            MasterServerApiPort = 8080,
+            MasterServerPort = 13000,
+            MasterServerName = "Master Server Instance",
+            MasterServerPassword = "password",
+            MaxGameServers = 100,
+            MaxPlayers = 10000,
+            MaxPlayersPerServer = 50,
+            MaxPartyMembers = 5,
+            AllowServerCreation = true,
+            AllowServerDeletion = true,
+            AllowServerJoining = true,
+            ServerRestartOnCrash = true,
+            ServerRestartOnShutdown = false,
+            ServerRestartOnUpdate = false,
+            ServerRestartSchedule = true,
+            ServerRestartScheduleTime = "00:00",
+            GameServerPortPool = 5100,
+            GameServerRandomPorts = false,
+            UsePlayFab = false,
+            PlayFabTitleID = null,
+            DeveloperSecretKey = null,
+        };
+        
+        public static MasterServerSettings GetFromDisk(string filePath = DefaultFilePath)
+        {
+            if (!File.Exists(filePath))
+                return Default;
+            var json = File.ReadAllText(filePath);
+            return JsonConvert.DeserializeObject<MasterServerSettings>(json) ?? Default;
+        }
+        
+        public void SaveToDisk(string filePath = DefaultFilePath)
+        {
+            // Create the directory if it doesn't exist
+            string directory = Path.GetDirectoryName(filePath) ?? throw new Exception("Failed to Get Directory");
+            if(!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+            
+            var json = JsonConvert.SerializeObject(this, Formatting.Indented);
+            File.WriteAllText(filePath, json);
         }
 
         public string? DockerContainerImage { get; set; }
