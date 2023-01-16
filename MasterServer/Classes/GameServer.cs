@@ -9,8 +9,10 @@ public class GameServer
     public int maxCapacity { get; set; }
     public string ServerId { get; set; }
     public string instanceId { get; set; }
+    
+    public bool isStandby { get; set; }
 
-    public GameServer(string ipAddress, int port, int playerCount, int maxCapacity, string instanceId, bool isActive, string serverId)
+    public GameServer(string ipAddress, int port, int playerCount, int maxCapacity, string instanceId, bool isActive, string serverId, bool isStandby)
     {
         this.ipAddress = ipAddress;
         this.port = port;
@@ -19,6 +21,7 @@ public class GameServer
         this.instanceId = instanceId;
         this.isActive = isActive;
         this.ServerId = serverId;
+        this.isStandby = isStandby;
     }
 
     public GameServer()
