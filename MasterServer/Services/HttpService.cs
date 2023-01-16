@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using PlayFab;
 using PlayFab.AdminModels;
 using ServerCommander.Classes;
@@ -84,13 +85,11 @@ public class HttpService
             {
                 case "GET":
                     var responseString = string.Empty;
+                    var responseBytes = Encoding.UTF8.GetBytes(responseString);
                     switch (request.Url.AbsolutePath.ToLower())
                     {
                         case "/status":
                             responseString = "Server is running";
-                            var responseBytes = Encoding.UTF8.GetBytes(responseString);
-                            response.ContentLength64 = responseBytes.Length;
-                            response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                             break;
                         case "/admin-panel":
                             // Build the response string for the admin panel
@@ -122,9 +121,6 @@ public class HttpService
                             }
 
                             responseString = responseString.TrimEnd(',', '\n') + "]";
-                            responseBytes = Encoding.UTF8.GetBytes(responseString);
-                            response.ContentLength64 = responseBytes.Length;
-                            response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                             break;
                         case "/servers.html":
                             // Get the assembly containing this code
@@ -164,28 +160,11 @@ public class HttpService
                                                   server.port + ",\"playerCount\":" + server.playerCount +
                                                   ",\"maxCapacity\":" + server.maxCapacity + "}\n";
                             }
-
-                            responseBytes = Encoding.UTF8.GetBytes(responseString);
-                            response.ContentLength64 = responseBytes.Length;
-                            response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                             break;
 
                         case "/show-full-servers":
                             // Build the response string
-                            responseString = "Full game servers:\n";
-                            foreach (GameServer server in gameServers)
-                            {
-                                if (server.playerCount == server.maxCapacity)
-                                {
-                                    responseString = "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" +
-                                                     server.port + ",\"playerCount\":" + server.playerCount +
-                                                     ",\"maxCapacity\":" + server.maxCapacity + "}";
-                                }
-                            }
-
-                            responseBytes = Encoding.UTF8.GetBytes(responseString);
-                            response.ContentLength64 = responseBytes.Length;
-                            response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                            responseString = JsonSerializer.Serialize(gameServers.Where(s => s.playerCount == s.maxCapacity).Select(x=> new {x.ipAddress, x.port, x.playerCount, x.maxCapacity}));
                             break;
 
                         case "/connect":
@@ -216,9 +195,6 @@ public class HttpService
                                 {
                                     TFConsole.WriteLine(e.Message, ConsoleColor.Red);
                                     responseString = e.Message;
-                                    responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                    response.ContentLength64 = responseBytes.Length;
-                                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                                     break;
                                 }
 
@@ -274,22 +250,18 @@ public class HttpService
                                         responseString = "Error creating new server";
                                     }
                                 }
-
-                                responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                response.ContentLength64 = responseBytes.Length;
-                                response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                             }
                             else
                             {
                                 responseString = "Server joining is disabled";
                                 TFConsole.WriteLine("Server joining is disabled", ConsoleColor.Yellow);
-                                responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                response.ContentLength64 = responseBytes.Length;
-                                response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                             }
 
                             break;
                     }
+                    responseBytes = Encoding.UTF8.GetBytes(responseString);
+                    response.ContentLength64 = responseBytes.Length;
+                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
 
                     break;
 
