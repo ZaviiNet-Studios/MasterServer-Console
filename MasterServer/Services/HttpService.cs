@@ -93,34 +93,15 @@ public class HttpService
                             break;
                         case "/admin-panel":
                             // Build the response string for the admin panel
-                            responseString = "[";
-                            foreach (GameServer server in gameServers)
+                            responseString = JsonSerializer.Serialize(gameServers.Select(x => new
                             {
-
-                                string population;
-
-                                if (server.playerCount >= server.maxCapacity * 0.8) population = "High";
-                                else if (server.playerCount >= server.maxCapacity * 0.5) population = "Medium";
-                                else population = "Low";
-
-
-
-                                if (!server.isActive) continue;
-                                string serverStatus;
-                                if (server.playerCount == server.maxCapacity)
-                                    serverStatus = "full";
-                                else
-                                    serverStatus = "active";
-
-                                responseString += "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" +
-                                                  server.port + ",\"playerCount\":" + server.playerCount +
-                                                  ",\"maxCapacity\":" + server.maxCapacity + ",\"status\":\"" +
-                                                  serverStatus + "\",\"serverID\":\"" + server.ServerId +
-                                                  "\",\"population\":\"" + population + "\"},\n";
-
-                            }
-
-                            responseString = responseString.TrimEnd(',', '\n') + "]";
+                                x.ipAddress,
+                                x.port,
+                                x.playerCount,
+                                x.maxCapacity,
+                                status = x.GetStatus(),
+                                population = x.GetPopulation()
+                            }));
                             break;
                         case "/servers.html":
                             // Get the assembly containing this code
@@ -153,13 +134,13 @@ public class HttpService
                         // Handle the request
                         case "/list-servers":
                             // Build the response string
-                            responseString = "Available game servers:\n";
-                            foreach (GameServer server in gameServers)
+                            responseString = JsonSerializer.Serialize(gameServers.Select(x=> new
                             {
-                                responseString += "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" +
-                                                  server.port + ",\"playerCount\":" + server.playerCount +
-                                                  ",\"maxCapacity\":" + server.maxCapacity + "}\n";
-                            }
+                                x.ipAddress,
+                                x.port,
+                                x.playerCount,
+                                x.maxCapacity
+                            }));
                             break;
 
                         case "/show-full-servers":
@@ -284,7 +265,8 @@ public class HttpService
                     break;
             }
         }
-        
+
+
         static GameServer? GetAvailableServer(List<GameServer> gameServers, int partySize)
         {
             // Check if there are any servers in the list
