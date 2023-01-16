@@ -10,6 +10,8 @@ using Newtonsoft.Json;
 using PlayFab;
 using PlayFab.AdminModels;
 using ServerCommander.Classes;
+using ServerCommander.Commands;
+using ServerCommander.Services;
 using ServerCommander.Settings.Config;
 
 #pragma warning disable CS1998
@@ -39,32 +41,31 @@ namespace ServerCommander
         private static readonly CancellationTokenSource  ListenForHttpRequestsCancellationToken  = new CancellationTokenSource ();
         private static Thread CheckForEmptyServersThread { get; set; }
         private static readonly CancellationTokenSource  CheckForEmptyServersCancellationToken = new CancellationTokenSource ();
+
+        public static readonly CommandService CommandService = new CommandService();
+        private static readonly List<GameServer> Servers = new List<GameServer>();
         
-        
-        public static void Main(string[] args)
+        public static List<GameServer> GetServers() => Servers;
+        public static GameServer? GetServer(int port)
         {
+            return Servers.FirstOrDefault(server => server.port == port);
+        }
+        public static void RemoveServer(int port)
+        {
+            GameServer? gameServer = GetServer(port);
+            if (gameServer != null)
+            {
+                Servers.Remove(gameServer);
+            }
+        }
+        
+        public static async Task Main(string[] args)
+        {
+            Startup();
             
-            
-
-            TFConsole.Start();
-
-            TFConsole.WriteLine("Loading ServerCommander", ConsoleColor.Green);
-            TFConsole.WriteLine();
-            TFConsole.WriteLine($"Starting {Settings.MasterServerName}...", ConsoleColor.Green);
-            TFConsole.WriteLine();
-            _ = DeleteExistingDockerContainers();
-            TFConsole.WriteLine("Deleting existing Docker containers..., please wait", ConsoleColor.Green);
-            TFConsole.WriteLine($"Send POST Data To http://{Settings.MasterServerIp}:{Port}", ConsoleColor.Green);
-            TFConsole.WriteLine();
-            TFConsole.WriteLine("Waiting for Commands... type 'help' to get a list of commands", ConsoleColor.Green);
-            TFConsole.WriteLine();
-            TFConsole.WriteLine("Press CTRL+C to exit...", ConsoleColor.Green);
-
-            var gameServers = new List<GameServer>();
-
-            ListenForServersThread = new Thread(() => { ListenForServers(gameServers, ListenForServersCancellationToken.Token); });
-            ListenForHttpRequestsThread = new Thread(() => { ListenForHttpRequestsAsync(gameServers,ListenForHttpRequestsCancellationToken.Token); });
-            CheckForEmptyServersThread = new Thread(() => { CheckForEmptyServers(gameServers, CheckForEmptyServersCancellationToken.Token); });
+            ListenForServersThread = new Thread(() => { ListenForServers(Servers, ListenForServersCancellationToken.Token); });
+            ListenForHttpRequestsThread = new Thread(() => { ListenForHttpRequestsAsync(Servers,ListenForHttpRequestsCancellationToken.Token); });
+            CheckForEmptyServersThread = new Thread(() => { CheckForEmptyServers(Servers, CheckForEmptyServersCancellationToken.Token); });
             
             ListenForServersThread.Start();
             ListenForHttpRequestsThread.Start();
@@ -72,114 +73,99 @@ namespace ServerCommander
 
 
             var partySize = 0;
-            CreateInitialGameServers(gameServers, null, null, partySize);
+            CreateInitialGameServers(Servers, null, null, partySize);
+
+            RegisterCommands();
 
             PlayFabAdminAPI.ForgetAllCredentials();
             while (MainThreadRunning)
             {
                 // Check if the user has entered a command
                 var command = Console.ReadLine() ?? "";
+                
+                // split the command into an array of strings
+                var commandArgs = command.Split(' ');
+                
+                // Combine Segments if they are in quotes
+                commandArgs = CombineQuotedSegments(commandArgs);
+                
+                await CommandService.RunCommand(commandArgs.FirstOrDefault(), commandArgs.Skip(1).ToArray());
+            }
+        }
 
-                switch (command)
+        private static string[] CombineQuotedSegments(string[] commandArgs)
+        {
+            // Combine Segments if they are in quotes
+            var combinedArgs = new List<string>();
+            var currentArg = "";
+            var inQuotes = false;
+            
+            foreach (var arg in commandArgs)
+            {
+                if (arg.StartsWith("\""))
                 {
-                    case "exit":
-                        _isRunning = false;
-                        Quit();
-                        break;
-                    case "help":
-                        TFConsole.WriteLine("List of available commands:");
-                        TFConsole.WriteLine("add - adds a new game server to the list");
-                        TFConsole.WriteLine("remove - removes a game server from the list");
-                        TFConsole.WriteLine("list - lists all available game servers");
-                        TFConsole.WriteLine("apihelp - lists the API");
-                        TFConsole.WriteLine("clear - clears the console");
-                        TFConsole.WriteLine("startall - starts all game servers");
-                        TFConsole.WriteLine("stopall - stops all game servers");
-                        TFConsole.WriteLine("help - displays this list of commands");
-                        TFConsole.WriteLine("exit - exits the program");
-                        TFConsole.WriteLine("overwrite - overwrites the player numbers settings");
-                        break;
-                    case "apihelp":
-                        TFConsole.WriteLine("API Help");
-                        TFConsole.WriteLine(
-                            "/connect?partySize=*PartySize* - Connects to a game server with the specified party size eg. /connect?partySize=4");
-                        TFConsole.WriteLine("/list-servers - Lists all available game servers");
-                        TFConsole.WriteLine("/show-full-servers - Lists all full game servers");
-                        TFConsole.WriteLine("/add - Adds a new game server to the list");
-                        break;
-                    case "clear":
-                        Console.Clear();
-                        break;
-                    case "add":
-                        // Parse the arguments for the add command
-                        TFConsole.WriteLine("Enter the IP address of the game server:");
-                        string addIpAddress = Console.ReadLine() ?? "";
-                        TFConsole.WriteLine("Enter the port of the game server:");
-                        int addPort = int.Parse(Console.ReadLine() ?? "");
-
-                        CreateGameServers(gameServers, addIpAddress, addPort.ToString(), 0, false);
-
-                        TFConsole.WriteLine(
-                            $"Added game server at {addIpAddress}:{addPort} with InstanceID");
-                        break;
-                    case "remove":
-                        // Parse the argument for the remove command
-                        TFConsole.WriteLine("Enter the port of the game server:");
-                        int removePort = int.Parse(Console.ReadLine() ?? "");
-                        // Remove the game server from the list
-                        gameServers.RemoveAll(server => server.port == removePort);
-                        _ = DeleteDockerContainerByPort(gameServers, removePort);
-                        TFConsole.WriteLine($"Removed game server at port {removePort}.");
-                        break;
-                    case "stopall":
-                        _ = StopAllDockerContainers(gameServers);
-                        TFConsole.WriteLine("Stopped all game servers.");
-                        break;
-                    case "startall":
-                        _ = StartAllDockerContainers(gameServers);
-                        TFConsole.WriteLine("Started all game servers.");
-                        break;
-                    case "list":
-                        // List the available game servers
-                        TFConsole.WriteLine("Available game servers:");
-                        foreach (GameServer server in gameServers)
-                        {
-                            TFConsole.WriteLine(
-                                $"[{server.instanceId}] {server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})");
-                        }
-
-                        break;
-                    case "overwrite":
-                        //overwrite player count
-                        TFConsole.WriteLine("Enter the port of the game server:");
-                        int overwritePort = int.Parse(Console.ReadLine() ?? "");
-                        TFConsole.WriteLine("Enter the new player count:");
-                        int overwritePlayerCount = int.Parse(Console.ReadLine() ?? "");
-                        GameServer? gameServer = gameServers.Find(server => server.port == overwritePort);
-                        if (gameServer != null)
-                        {
-                            gameServer.playerCount = overwritePlayerCount;
-                            TFConsole.WriteLine(
-                                $"Overwrote player count of game server at port {overwritePort} to {overwritePlayerCount}.");
-                        }
-                        else
-                        {
-                            TFConsole.WriteLine($"Game server at port {overwritePort} not found.",ConsoleColor.Red);
-                        }
-                        break;
+                    inQuotes = true;
+                    currentArg += arg.Substring(1);
+                }
+                else if (arg.EndsWith("\""))
+                {
+                    inQuotes = false;
+                    currentArg += " " + arg.Substring(0, arg.Length - 1);
+                    combinedArgs.Add(currentArg);
+                    currentArg = "";
+                }
+                else if (inQuotes)
+                {
+                    currentArg += " " + arg;
+                }
+                else
+                {
+                    combinedArgs.Add(arg);
                 }
             }
+                
+            return combinedArgs.ToArray();
+        }
+
+        private static void RegisterCommands()
+        {
+            CommandService.RegisterCommand(new HelpCommand());
+            CommandService.RegisterCommand(new QuitCommand());
+            CommandService.RegisterCommand(new ClearCommand());
+            CommandService.RegisterCommand(new AddServerCommand());
+            CommandService.RegisterCommand(new StopAllCommand());
+            CommandService.RegisterCommand(new StartAllCommand());
+            CommandService.RegisterCommand(new ApiHelpCommand());
+            CommandService.RegisterCommand(new OverwriteCommand());
+            CommandService.RegisterCommand(new ListCommand());
+            CommandService.RegisterCommand(new RemoveServerCommand());
+        }
+
+        private static void Startup()
+        {
+            TFConsole.Start();
+            TFConsole.WriteLine("Loading ServerCommander\n", ConsoleColor.Green);
+            TFConsole.WriteLine($"Starting {Settings.MasterServerName}...\n", ConsoleColor.Green);
+            _ = DeleteExistingDockerContainers();
+            TFConsole.WriteLine("Deleting existing Docker containers..., please wait", ConsoleColor.Green);
+            TFConsole.WriteLine($"Send POST Data To http://{Settings.MasterServerIp}:{Port}\n", ConsoleColor.Green);
+            TFConsole.WriteLine("Waiting for Commands... type 'help' to get a list of commands\n", ConsoleColor.Green);
+            TFConsole.WriteLine("Press CTRL+C to exit...", ConsoleColor.Green);
         }
 
         public static void Quit()
         {
             // Stop Main Thread Loop
             MainThreadRunning = false;
+            _isRunning = false;
             
             // Stop Running Threads
             ListenForServersCancellationToken.Cancel();
             ListenForHttpRequestsCancellationToken.Cancel();
             CheckForEmptyServersCancellationToken.Cancel();
+            ListenForServersThread.Join();
+            ListenForHttpRequestsThread.Join();
+            CheckForEmptyServersThread.Join();
             
             // Save Current Settings To File
             Settings.SaveToDisk();
@@ -223,7 +209,7 @@ namespace ServerCommander
             }
         }
 
-        private static void CreateInitialGameServers(List<GameServer> gameServers, string ip, string port,
+        private static void CreateInitialGameServers(List<GameServer> gameServers, string ip, int? port,
             int partySize)
         {
             if (_isRunning)
@@ -256,15 +242,15 @@ namespace ServerCommander
             }
         }
 
-        private static void CreateGameServers(List<GameServer> gameServers, string ip, string port, int partySize, bool isStandby)
+        public static void CreateGameServers(string ip, int port, int partySize, bool isStandby)
         {
             var gameServersToBeCreated = InitialServers.numServers;
             var InstancedID = String.Empty;
             string serverID;
             
 
-            CreateDockerContainer(gameServers, ip, port, out InstancedID, out serverID);
-            CreateNewServer(gameServers, ip, port, InstancedID, serverID, isStandby);
+            CreateDockerContainer(Servers, ip, port, out InstancedID, out serverID);
+            CreateNewServer(Servers, ip, port, InstancedID, serverID, isStandby);
         }
 
         private static GameServers? InitialDockerContainerSettings()
@@ -533,9 +519,9 @@ namespace ServerCommander
                                     {
                                         var instancedID = string.Empty;
                                         string serverID;
-                                        CreateDockerContainer(gameServers, string.Empty, string.Empty, out instancedID,
+                                        CreateDockerContainer(gameServers, string.Empty, null, out instancedID,
                                             out serverID);
-                                        GameServer newServer = CreateNewServer(gameServers, string.Empty, string.Empty,
+                                        GameServer newServer = CreateNewServer(gameServers, string.Empty, null,
                                             instancedID, serverID,false);
                                         if (newServer != null)
                                         {
@@ -628,7 +614,7 @@ namespace ServerCommander
         }
 
         //Server Creation Stuff
-        private static GameServer CreateNewServer(List<GameServer> gameServers, string ip, string port,
+        private static GameServer CreateNewServer(List<GameServer> gameServers, string ip, int? port,
             string InstancedID, string serverID, bool isStandby)
         {
             var serverIP = DefaultIp;
@@ -638,10 +624,8 @@ namespace ServerCommander
                 serverIP = ip;
             }
 
-            if (!string.IsNullOrEmpty(port))
-            {
-                serverPort = Convert.ToInt32(port);
-            }
+            if (port != null)
+                serverPort = port.Value;
 
             var gameServer = new GameServer(serverIP, serverPort, 0, Settings.MaxPlayersPerServer, InstancedID, true,
                 serverID, isStandby);
@@ -651,9 +635,10 @@ namespace ServerCommander
             return gameServer;
         }
 
-        private static void CreateDockerContainer(List<GameServer> gameServers, string? ip, string? port,
+        private static void CreateDockerContainer(List<GameServer> gameServers, string? ip, int? port,
             out string InstancedID, out string ServerID)
         {
+            
             var imageName = $"{Settings.DockerContainerImage}";
             var imageTag = $"{Settings.DockerContainerImageTag}";
             var endpointUrl = $"{Settings.DockerTcpNetwork}";
@@ -668,13 +653,11 @@ namespace ServerCommander
             {
                 HostIP = ip;
             }
-
-            if (!string.IsNullOrEmpty(port))
-            {
-                HostPort = Convert.ToInt32(port);
-            }
-
             
+            if(port != null)
+                HostPort = port.Value;
+
+
             try
             {
                 TFConsole.WriteLine($"New Server Requested with IP {HostIP} and Port {HostPort}", ConsoleColor.Yellow);
@@ -775,7 +758,7 @@ namespace ServerCommander
             }
         }
 
-        private static async Task DeleteDockerContainerByPort(List<GameServer> gameServers, int port)
+        public static async Task DeleteDockerContainerByPort(int port)
         {
             var endpointUrl = $"{Settings.DockerTcpNetwork}";
 
@@ -783,7 +766,7 @@ namespace ServerCommander
             var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
 
             // Get the ID of the container to delete
-            var containerId = gameServers.Find(server => server.port == port)?.instanceId;
+            var containerId = Servers.Find(server => server.port == port)?.instanceId;
 
             // Delete the container
             try
@@ -797,7 +780,7 @@ namespace ServerCommander
             }
         }
 
-        private static async Task StopAllDockerContainers(List<GameServer> gameServers)
+        public static async Task StopAllDockerContainers()
         {
             var endpointUrl = $"{Settings.DockerTcpNetwork}";
 
@@ -831,7 +814,7 @@ namespace ServerCommander
             }
         }
 
-        private static async Task StartAllDockerContainers(List<GameServer> gameServers)
+        public static async Task StartAllDockerContainers()
         {
             var endpointUrl = $"{Settings.DockerTcpNetwork}";
 
