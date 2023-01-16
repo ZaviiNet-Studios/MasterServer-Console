@@ -33,6 +33,14 @@ namespace ServerCommander
         /// </summary>
         private static bool MainThreadRunning { get; set; } = true;
         
+        private static Thread ListenForServersThread { get; set; }
+        private static readonly CancellationTokenSource  ListenForServersCancellationToken = new CancellationTokenSource ();
+        private static Thread ListenForHttpRequestsThread { get; set; }
+        private static readonly CancellationTokenSource  ListenForHttpRequestsCancellationToken  = new CancellationTokenSource ();
+        private static Thread CheckForEmptyServersThread { get; set; }
+        private static readonly CancellationTokenSource  CheckForEmptyServersCancellationToken = new CancellationTokenSource ();
+        
+        
         public static void Main(string[] args)
         {
             
@@ -54,9 +62,13 @@ namespace ServerCommander
 
             var gameServers = new List<GameServer>();
 
-            new Thread(() => { ListenForServers(gameServers); }).Start();
-            new Thread(() => { ListenForHttpRequestsAsync(gameServers); }).Start();
-            new Thread(() => { CheckForEmptyServers(gameServers); }).Start();
+            ListenForServersThread = new Thread(() => { ListenForServers(gameServers, ListenForServersCancellationToken.Token); });
+            ListenForHttpRequestsThread = new Thread(() => { ListenForHttpRequestsAsync(gameServers,ListenForHttpRequestsCancellationToken.Token); });
+            CheckForEmptyServersThread = new Thread(() => { CheckForEmptyServers(gameServers, CheckForEmptyServersCancellationToken.Token); });
+            
+            ListenForServersThread.Start();
+            ListenForHttpRequestsThread.Start();
+            CheckForEmptyServersThread.Start();
 
 
             var partySize = 0;
@@ -163,6 +175,11 @@ namespace ServerCommander
         {
             // Stop Main Thread Loop
             MainThreadRunning = false;
+            
+            // Stop Running Threads
+            ListenForServersCancellationToken.Cancel();
+            ListenForHttpRequestsCancellationToken.Cancel();
+            CheckForEmptyServersCancellationToken.Cancel();
             
             // Save Current Settings To File
             Settings.SaveToDisk();
@@ -292,7 +309,8 @@ namespace ServerCommander
             return availableServer ?? gameServers[0];
         }
 
-        private static void ListenForHttpRequestsAsync(List<GameServer> gameServers)
+        private static void ListenForHttpRequestsAsync(List<GameServer> gameServers,
+            CancellationToken cancellationToken)
         {
 
             var host = Dns.GetHostName();
@@ -325,7 +343,7 @@ namespace ServerCommander
                 }
             }
 
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 // Wait for a request to come in
                 var context = httpListener.GetContext();
@@ -730,9 +748,10 @@ namespace ServerCommander
             }
         }
         
-        private static async Task CheckForEmptyServers(List<GameServer> gameServers)
+        private static void CheckForEmptyServers(List<GameServer> gameServers,
+            CancellationToken cancellationToken)
         {
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 // Sleep for 5 minutes
                 Thread.Sleep(5 * 60 * 1000);
@@ -880,13 +899,14 @@ namespace ServerCommander
             return Task.CompletedTask;
         }
 
-        private static async void ListenForServers(List<GameServer> gameServers)
+        private static async void ListenForServers(List<GameServer> gameServers,
+            CancellationToken cancellationToken)
         {
             // Create a TCP listener
             var listener = new TcpListener(IPAddress.Any, Port);
             listener.Start();
 
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 // Wait for a game server to connect
                 var client = listener.AcceptTcpClient();
