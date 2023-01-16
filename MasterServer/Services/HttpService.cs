@@ -135,6 +135,7 @@ public class HttpService
     {
         var responseString = JsonSerializer.Serialize(gameServers.Select(x => new
         {
+            x.ServerId,
             x.ipAddress,
             x.port,
             x.playerCount,
@@ -302,14 +303,8 @@ public class HttpService
 
     private void ServerHtmlEndpoint(HttpListenerRequest request, HttpListenerResponse response)
     {
-        // Get the assembly containing this code
-        Assembly assembly = Assembly.GetExecutingAssembly();
-        // Get the embedded resource stream (also ignore warning, will never be an issue
-        Stream resourceStream =
-            assembly.GetManifestResourceStream("MasterServer.servers.html");
-        using StreamReader reader = new StreamReader(resourceStream);
-        // Read the contents of the HTML file
-        var html = reader.ReadToEnd();
+        string filePath = "servers.html";
+        string html = File.ReadAllText(filePath);
 
         // Set the response headers
         response.ContentType = "text/html";
