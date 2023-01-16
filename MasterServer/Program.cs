@@ -35,15 +35,15 @@ namespace ServerCommander
 
             TFConsole.WriteLine("Loading ServerCommander", ConsoleColor.Green);
             TFConsole.WriteLine();
-            TFConsole.WriteLine($"Starting {Settings.MasterServerName}...");
+            TFConsole.WriteLine($"Starting {Settings.MasterServerName}...", ConsoleColor.Green);
             TFConsole.WriteLine();
             _ = DeleteExistingDockerContainers();
-            TFConsole.WriteLine("Deleting existing Docker containers...");
-            TFConsole.WriteLine($"Send POST Data To http://{Settings.MasterServerIp}:{Port}");
+            TFConsole.WriteLine("Deleting existing Docker containers..., please wait", ConsoleColor.Green);
+            TFConsole.WriteLine($"Send POST Data To http://{Settings.MasterServerIp}:{Port}", ConsoleColor.Green);
             TFConsole.WriteLine();
-            TFConsole.WriteLine("Waiting for Commands... type 'help' to get a list of commands");
+            TFConsole.WriteLine("Waiting for Commands... type 'help' to get a list of commands", ConsoleColor.Green);
             TFConsole.WriteLine();
-            TFConsole.WriteLine("Press CTRL+C to exit...");
+            TFConsole.WriteLine("Press CTRL+C to exit...", ConsoleColor.Green);
 
             var gameServers = new List<GameServer>();
 
@@ -145,7 +145,7 @@ namespace ServerCommander
                         }
                         else
                         {
-                            TFConsole.WriteLine($"Game server at port {overwritePort} not found.");
+                            TFConsole.WriteLine($"Game server at port {overwritePort} not found.",ConsoleColor.Red);
                         }
                         break;
                 }
@@ -184,7 +184,7 @@ namespace ServerCommander
             }
             catch (Exception e)
             {
-                TFConsole.WriteLine($"Error deleting containers: {e.Message}");
+                TFConsole.WriteLine($"Error deleting containers: {e.Message}",ConsoleColor.Red);
             }
         }
 
@@ -210,14 +210,14 @@ namespace ServerCommander
                     else
                     {
                         TFConsole.WriteLine(
-                            $"Initial game servers created successfully - Number Created = {0} {gameServersCreated}");
+                            $"Initial game servers created successfully - Number Created = {0} {gameServersCreated}",ConsoleColor.Green);
                         break;
                     }
                 }
             }
             else
             {
-                TFConsole.WriteLine("Docker is not running, Unable to create initial game servers");
+                TFConsole.WriteLine("Docker is not running, Unable to create initial game servers",ConsoleColor.Red);
             }
         }
 
@@ -331,23 +331,6 @@ namespace ServerCommander
 
         private static void ListenForHttpRequestsAsync(List<GameServer> gameServers)
         {
-            try
-            {
-                var client = new DockerClientConfiguration(new Uri(Settings.DockerTcpNetwork)).CreateClient();
-                var networks = client.Networks.ListNetworksAsync().Result;
-                _isRunning = true;
-                foreach (var network in networks)
-                {
-                    if (network.Name == "bridge")
-                    {
-                        _networkString = $"http://{network.IPAM.Config[0].Subnet}:{WebPort}/";
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                TFConsole.WriteLine($"Error getting network string: {e.Message}");
-            }
 
             var host = Dns.GetHostName();
             var addresses = Dns.GetHostAddresses(host);
@@ -355,7 +338,6 @@ namespace ServerCommander
             
             var prefixes = new List<string>() {
                 
-                $"http://{_networkString}:{WebPort}/",
                 $"http://127.0.0.1:{WebPort}/",
                 $"http://localhost:{WebPort}/",
                 $"http://{ipv4Address}:{WebPort}/",
@@ -370,13 +352,13 @@ namespace ServerCommander
                 {
                     httpListener.Prefixes.Add(prefix);
                     httpListener.Start();
-                    Console.WriteLine("Successfully started the listener on prefix: " + prefix);
+                    TFConsole.WriteLine("Successfully started the listener on prefix: " + prefix, ConsoleColor.Green);
                     break;
                 }
                 catch (HttpListenerException ex)
                 {
-                    Console.WriteLine("Error adding prefix: " + prefix);
-                    Console.WriteLine("Error message: " + ex.Message);
+                    TFConsole.WriteLine("Error adding prefix: " + prefix ,ConsoleColor.Red);
+                    TFConsole.WriteLine("Error message: " + ex.Message ,ConsoleColor.Red);
                 }
             }
 
@@ -539,7 +521,7 @@ namespace ServerCommander
 
                                     if (!isPlayerBanned)
                                     {
-                                        TFConsole.WriteLine("Player is banned");
+                                        TFConsole.WriteLine("Player is banned", ConsoleColor.Red);
                                         return;
                                     }
 
@@ -557,7 +539,7 @@ namespace ServerCommander
                                             availableServer.playerCount += partySize;
 
                                             TFConsole.WriteLine(
-                                                $"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}");
+                                                $"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}", ConsoleColor.Green);
 
                                         }
                                         else
@@ -593,7 +575,7 @@ namespace ServerCommander
                                 else
                                 {
                                     responseString = "Server joining is disabled";
-                                    TFConsole.WriteLine("Server joining is disabled");
+                                    TFConsole.WriteLine("Server joining is disabled", ConsoleColor.Yellow);
                                     responseBytes = Encoding.UTF8.GetBytes(responseString);
                                     response.ContentLength64 = responseBytes.Length;
                                     response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
@@ -714,7 +696,7 @@ namespace ServerCommander
             
             try
             {
-                TFConsole.WriteLine($"New Server Requested with IP {HostIP} and Port {HostPort}");
+                TFConsole.WriteLine($"New Server Requested with IP {HostIP} and Port {HostPort}", ConsoleColor.Yellow);
 
                 if (Settings.AllowServerCreation)
                 {
@@ -763,23 +745,23 @@ namespace ServerCommander
                         client.Containers.StartContainerAsync(containerId, null).Wait();
                         _numServers++;
 
-                        TFConsole.WriteLine($"New Server Created with ID {ServerID}");
+                        TFConsole.WriteLine($"New Server Created with ID {ServerID}", ConsoleColor.Green);
                     }
                     else
                     {
-                        TFConsole.WriteLine("Max game servers reached");
+                        TFConsole.WriteLine("Max game servers reached", ConsoleColor.Red);
                     }
                 }
                 else
                 {
-                    TFConsole.WriteLine("Server creation is disabled");
+                    TFConsole.WriteLine("Server creation is disabled" ,ConsoleColor.Red);
                 }
 
                 InstancedID = newInstancedID;
             }
             catch (Exception e)
             {
-                TFConsole.WriteLine("Error Creating Server, Check Docker is Running/ Check Connection Settings are Correct");
+                TFConsole.WriteLine("Error Creating Server, Check Docker is Running/ Check Connection Settings are Correct" ,ConsoleColor.Red);
                 TFConsole.WriteLine(e.Message);
                 InstancedID = string.Empty;
             }
@@ -803,7 +785,7 @@ namespace ServerCommander
                     }
                     else
                     {
-                        TFConsole.WriteLine("Standby Server Detected, Not Deleting");
+                        TFConsole.WriteLine("Standby Server Detected, Not Deleting" ,ConsoleColor.Yellow);
                     }
                 }
 
@@ -829,7 +811,7 @@ namespace ServerCommander
             }
             catch (DockerApiException ex)
             {
-                TFConsole.WriteLine($"Error deleting container: {ex.Message}");
+                TFConsole.WriteLine($"Error deleting container: {ex.Message}",ConsoleColor.Red);
             }
         }
 
@@ -863,7 +845,7 @@ namespace ServerCommander
             }
             catch (DockerApiException ex)
             {
-                TFConsole.WriteLine($"Error stopping container: {ex.Message}");
+                TFConsole.WriteLine($"Error stopping container: {ex.Message}",ConsoleColor.Red);
             }
         }
 
@@ -896,7 +878,7 @@ namespace ServerCommander
             }
             catch (DockerApiException ex)
             {
-                TFConsole.WriteLine($"Error stopping container: {ex.Message}");
+                TFConsole.WriteLine($"Error stopping container: {ex.Message}",ConsoleColor.Red);
             }
         }
 
@@ -917,7 +899,7 @@ namespace ServerCommander
                 }
                 catch (DockerApiException ex)
                 {
-                    TFConsole.WriteLine($"Error deleting container: {ex.Message}");
+                    TFConsole.WriteLine($"Error deleting container: {ex.Message}",ConsoleColor.Red);
                 }
             }
             else
@@ -928,7 +910,7 @@ namespace ServerCommander
                 }
                 catch (DockerApiException ex)
                 {
-                    TFConsole.WriteLine($"Error stopping container: {ex.Message}");
+                    TFConsole.WriteLine($"Error stopping container: {ex.Message}",ConsoleColor.Red);
                 }
             }
 
@@ -966,14 +948,14 @@ namespace ServerCommander
 
                 if (gameServer == null)
                 {
-                    TFConsole.WriteLine($"Received data from unknown game server: {serverID}");
+                    TFConsole.WriteLine($"Received data from unknown game server: {serverID}",ConsoleColor.Red);
                     continue;
                 }
 
                 // Update the game server's player count
                 gameServer.playerCount = playerCount;
 
-                TFConsole.WriteLine($"Received data from game server {serverID}: {playerCount} players");
+                TFConsole.WriteLine($"Received data from game server {serverID}: {playerCount} players",ConsoleColor.Green);
 
                 // Close the connection with the game server
                 client.Close();

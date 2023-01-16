@@ -7,7 +7,7 @@
         <Nullable>enable</Nullable>
         <AssemblyName>ServerCommander</AssemblyName>
         <RootNamespace>ServerCommander</RootNamespace>
-        <ApplicationIcon>Resources\icon-512.png</ApplicationIcon>
+        <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
         <PackageId>ServerCommander</PackageId>
         <Version>0.05</Version>
         <Title>ServerCommander</Title>
@@ -16,7 +16,7 @@
         <Copyright>ZaviiNetStudios 2023</Copyright>
         <PackageProjectUrl>https://github.com/ZaviiNet-Studios/MasterServer-Console</PackageProjectUrl>
         <PackageLicenseUrl>https://choosealicense.com/licenses/gpl-3.0/</PackageLicenseUrl>
-        <PackageIcon>icon-512.png</PackageIcon>
+        <PackageIcon>icon.ico</PackageIcon>
         <RepositoryUrl>https://github.com/ZaviiNet-Studios/MasterServer-Console</RepositoryUrl>
         <Company>ServerCommander</Company>
         <Product>ServerCommander</Product>
@@ -42,7 +42,6 @@
 
     <ItemGroup>
       <None Remove="Resources\icon-512.png" />
-      <Resource Include="Resources\icon-512.png" />
     </ItemGroup>
 
 </Project>
