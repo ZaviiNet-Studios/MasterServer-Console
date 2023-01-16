@@ -25,11 +25,13 @@ namespace ServerCommander
         private static readonly string? DefaultIp = Settings.MasterServerIp;
         private static int _portPool = Settings.GameServerPortPool;
         private static string _networkString = "127.0.0.1"; //Change this to your network ip if you want to run the server on a different machine (If Docker is running then this is changed to the Bridge Network)
-        private static bool _isRunning;
+        private static bool _isRunning = true;
 
 
         public static void Main(string[] args)
         {
+            
+            
 
             TFConsole.Start();
 
