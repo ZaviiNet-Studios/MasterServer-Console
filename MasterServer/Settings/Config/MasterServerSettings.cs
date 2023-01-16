@@ -109,6 +109,11 @@ namespace ServerCommander.Settings.Config
             var json = JsonConvert.SerializeObject(this, Formatting.Indented);
             File.WriteAllText(filePath, json);
         }
+        
+        public static void SaveDefaultToDisk(string filePath = DefaultFilePath)
+        {
+            Default.SaveToDisk(filePath);
+        }
 
         public string? DockerContainerImage { get; set; }
         

@@ -28,7 +28,11 @@ namespace ServerCommander
         private static string _networkString = "127.0.0.1"; //Change this to your network ip if you want to run the server on a different machine (If Docker is running then this is changed to the Bridge Network)
         private static bool _isRunning = true;
 
-
+        /// <summary>
+        /// Stops The Main Loop When False
+        /// </summary>
+        private static bool MainThreadRunning { get; set; } = true;
+        
         public static void Main(string[] args)
         {
             
@@ -59,7 +63,7 @@ namespace ServerCommander
             CreateInitialGameServers(gameServers, null, null, partySize);
 
             PlayFabAdminAPI.ForgetAllCredentials();
-            while (true)
+            while (MainThreadRunning)
             {
                 // Check if the user has entered a command
                 var command = Console.ReadLine() ?? "";
@@ -68,7 +72,7 @@ namespace ServerCommander
                 {
                     case "exit":
                         _isRunning = false;
-                        Environment.Exit(0);
+                        Quit();
                         break;
                     case "help":
                         TFConsole.WriteLine("List of available commands:");
@@ -153,6 +157,17 @@ namespace ServerCommander
                         break;
                 }
             }
+        }
+
+        public static void Quit()
+        {
+            // Stop Main Thread Loop
+            MainThreadRunning = false;
+            
+            // Save Current Settings To File
+            Settings.SaveToDisk();
+            
+            Environment.Exit(0);
         }
 
         private static async Task DeleteExistingDockerContainers()
