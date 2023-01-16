@@ -1,4 +1,4 @@
-﻿namespace MasterServer;
+﻿namespace ServerCommander.Classes;
 
 public class GameServer
 {

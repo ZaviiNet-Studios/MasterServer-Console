@@ -1,4 +1,4 @@
-﻿namespace MasterServer
+﻿namespace ServerCommander.Settings.Config
 {
     public class Settings
     {

@@ -1,22 +1,24 @@
 ﻿using System.Diagnostics;
-using Docker.DotNet;
-using Docker.DotNet.Models;
-using Newtonsoft.Json;
-using PlayFab;
-using PlayFab.AdminModels;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using Docker.DotNet;
+using Docker.DotNet.Models;
+using MasterServer;
+using Newtonsoft.Json;
+using PlayFab;
+using PlayFab.AdminModels;
+using ServerCommander.Classes;
 
 #pragma warning disable CS1998
 
-namespace MasterServer
+namespace ServerCommander
 {
     class Program
     {
         private static int _numServers;
-        private static readonly Settings Settings = LoadSettings();
+        private static readonly Settings.Config.Settings Settings = LoadSettings();
         private static readonly GameServers? InitialServers = InitialDockerContainerSettings();
         private static readonly int Port = Settings.MasterServerPort;
         private static readonly int WebPort = Settings.MasterServerApiPort;
@@ -31,7 +33,7 @@ namespace MasterServer
 
             TFConsole.Start();
 
-            TFConsole.WriteLine("Loading MasterServer-Console");
+            TFConsole.WriteLine("Loading ServerCommander", ConsoleColor.Green);
             TFConsole.WriteLine();
             TFConsole.WriteLine($"Starting {Settings.MasterServerName}...");
             TFConsole.WriteLine();
@@ -61,6 +63,10 @@ namespace MasterServer
 
                 switch (command)
                 {
+                    case "exit":
+                        _isRunning = false;
+                        Environment.Exit(0);
+                        break;
                     case "help":
                         TFConsole.WriteLine("List of available commands:");
                         TFConsole.WriteLine("add - adds a new game server to the list");
@@ -70,8 +76,9 @@ namespace MasterServer
                         TFConsole.WriteLine("clear - clears the console");
                         TFConsole.WriteLine("startall - starts all game servers");
                         TFConsole.WriteLine("stopall - stops all game servers");
-                        //TFConsole.WriteLine("connect - connects to a game server with the specified party size");
                         TFConsole.WriteLine("help - displays this list of commands");
+                        TFConsole.WriteLine("exit - exits the program");
+                        TFConsole.WriteLine("overwrite - overwrites the player numbers settings");
                         break;
                     case "apihelp":
                         TFConsole.WriteLine("API Help");
@@ -140,7 +147,6 @@ namespace MasterServer
                         {
                             TFConsole.WriteLine($"Game server at port {overwritePort} not found.");
                         }
-
                         break;
                 }
             }
@@ -248,13 +254,13 @@ namespace MasterServer
             }
         }
 
-        private static Settings LoadSettings()
+        private static Settings.Config.Settings LoadSettings()
         {
             string filePath = "config/settings.json";
 
             if (!File.Exists(filePath))
             {
-                Settings defaultSettings = new Settings
+                Settings.Config.Settings defaultSettings = new Settings.Config.Settings
                 {
                     CreateInitialGameServers = true,
                     CreateStandbyGameServers = false,
@@ -299,7 +305,7 @@ namespace MasterServer
             else
             {
                 string json = File.ReadAllText(filePath);
-                return JsonConvert.DeserializeObject<Settings>(json) ?? new Settings();
+                return JsonConvert.DeserializeObject<Settings.Config.Settings>(json) ?? new Settings.Config.Settings();
             }
         }
 
