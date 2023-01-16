@@ -153,7 +153,7 @@ namespace ServerCommander
             TFConsole.WriteLine("Deleting existing Docker containers..., please wait", ConsoleColor.Green);
             TFConsole.WriteLine($"Send POST Data To http://{Settings.MasterServerIp}:{Port}\n", ConsoleColor.Green);
             TFConsole.WriteLine("Waiting for Commands... type 'help' to get a list of commands\n", ConsoleColor.Green);
-            TFConsole.WriteLine("Press CTRL+C to exit...", ConsoleColor.Green);
+            TFConsole.WriteLine("Type Quit or Exit to Close Application.", ConsoleColor.Green);
         }
 
         public static void Quit()
