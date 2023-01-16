@@ -11,7 +11,7 @@ public class StartAllCommand : IConsoleCommand
     public async Task ExecuteAsync(string[] args)
     {
         TFConsole.WriteLine("Starting all game servers.");
-        await Program.StartAllDockerContainers();
+        await Program.DockerService.StartAllDockerContainers();
         TFConsole.WriteLine("Started all game servers.");
     }
 }
