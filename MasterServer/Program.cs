@@ -146,7 +146,10 @@ namespace ServerCommander
             TFConsole.Start();
             TFConsole.WriteLine("Loading ServerCommander\n", ConsoleColor.Green);
             TFConsole.WriteLine($"Starting {Settings.MasterServerName}...\n", ConsoleColor.Green);
-            _ = DeleteExistingDockerContainers();
+            if (Settings.AllowServerDeletion)
+            {
+                _ = DeleteExistingDockerContainers();
+            }
             TFConsole.WriteLine("Deleting existing Docker containers..., please wait", ConsoleColor.Green);
             TFConsole.WriteLine($"Send POST Data To http://{Settings.MasterServerIp}:{Port}\n", ConsoleColor.Green);
             TFConsole.WriteLine("Waiting for Commands... type 'help' to get a list of commands\n", ConsoleColor.Green);
