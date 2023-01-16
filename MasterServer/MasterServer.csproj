@@ -34,14 +34,14 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="servers.html" />
-      <EmbeddedResource Include="servers.html">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </EmbeddedResource>
+      <None Remove="Resources\icon-512.png" />
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="Resources\icon-512.png" />
+      <None Remove="servers.html" />
+      <EmbeddedResource Include="servers.html">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
     </ItemGroup>
 
 </Project>

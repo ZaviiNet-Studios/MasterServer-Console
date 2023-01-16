@@ -11,7 +11,7 @@ public class StopAllCommand : IConsoleCommand
     public async Task ExecuteAsync(string[] args)
     {
         TFConsole.WriteLine("Stopping all game servers.");
-        await Program.StopAllDockerContainers();
+        await Program.DockerService.StopAllDockerContainers();
         TFConsole.WriteLine("Stopped all game servers.");
     }
 }

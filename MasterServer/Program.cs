@@ -35,10 +35,13 @@ namespace ServerCommander
         /// </summary>
         private static bool MainThreadRunning { get; set; } = true;
         
+        private static readonly HttpService _httpService = new HttpService(WebPort, Settings);
+        private static readonly DockerService _dockerService = new DockerService(Settings);
+        
+        public static DockerService DockerService => _dockerService;
+        
         private static Thread ListenForServersThread { get; set; }
         private static readonly CancellationTokenSource  ListenForServersCancellationToken = new CancellationTokenSource ();
-        private static Thread ListenForHttpRequestsThread { get; set; }
-        private static readonly CancellationTokenSource  ListenForHttpRequestsCancellationToken  = new CancellationTokenSource ();
         private static Thread CheckForEmptyServersThread { get; set; }
         private static readonly CancellationTokenSource  CheckForEmptyServersCancellationToken = new CancellationTokenSource ();
 
@@ -64,11 +67,10 @@ namespace ServerCommander
             Startup();
             
             ListenForServersThread = new Thread(() => { ListenForServers(Servers, ListenForServersCancellationToken.Token); });
-            ListenForHttpRequestsThread = new Thread(() => { ListenForHttpRequestsAsync(Servers,ListenForHttpRequestsCancellationToken.Token); });
             CheckForEmptyServersThread = new Thread(() => { CheckForEmptyServers(Servers, CheckForEmptyServersCancellationToken.Token); });
             
             ListenForServersThread.Start();
-            ListenForHttpRequestsThread.Start();
+            _httpService.Start(Servers);
             CheckForEmptyServersThread.Start();
 
 
@@ -148,7 +150,7 @@ namespace ServerCommander
             TFConsole.WriteLine($"Starting {Settings.MasterServerName}...\n", ConsoleColor.Green);
             if (Settings.AllowServerDeletion)
             {
-                _ = DeleteExistingDockerContainers();
+                _ = _dockerService.DeleteExistingDockerContainers();
             }
             TFConsole.WriteLine("Deleting existing Docker containers..., please wait", ConsoleColor.Green);
             TFConsole.WriteLine($"Send POST Data To http://{Settings.MasterServerIp}:{Port}\n", ConsoleColor.Green);
@@ -164,53 +166,18 @@ namespace ServerCommander
             
             // Stop Running Threads
             ListenForServersCancellationToken.Cancel();
-            ListenForHttpRequestsCancellationToken.Cancel();
             CheckForEmptyServersCancellationToken.Cancel();
             ListenForServersThread.Join();
-            ListenForHttpRequestsThread.Join();
             CheckForEmptyServersThread.Join();
             StopAllDockerContainers();
+            
+            // Stop Http Service
+            _httpService.Stop();
             
             // Save Current Settings To File
             Settings.SaveToDisk();
             
             Environment.Exit(0);
-        }
-
-        private static async Task DeleteExistingDockerContainers()
-        {
-            var endpoint = $"{Settings.DockerTcpNetwork}";
-
-            var client = new DockerClientConfiguration(new Uri(endpoint)).CreateClient();
-
-            var containers = client.Containers.ListContainersAsync(new ContainersListParameters()
-            {
-                All = true
-            }).Result;
-            try
-
-            {
-                foreach (var container in containers)
-                {
-                    if (container.Names != null)
-                    {
-                        foreach (var name in container.Names)
-                        {
-                            if (name.Contains("GameServer"))
-                            {
-                                client.Containers.RemoveContainerAsync(container.ID, new ContainerRemoveParameters()
-                                {
-                                    Force = true
-                                }).Wait();
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                TFConsole.WriteLine($"Error deleting containers: {e.Message}",ConsoleColor.Red);
-            }
         }
 
         private static void CreateInitialGameServers(List<GameServer> gameServers, string ip, int? port,
@@ -279,346 +246,10 @@ namespace ServerCommander
             }
         }
 
-        private static GameServer? GetAvailableServer(List<GameServer> gameServers, int partySize)
-        {
-            // Check if there are any servers in the list
-            if (gameServers.Count == 0)
-            {
-                // If no servers, return null
-                return null;
-            }
-
-            // Sort the list of game servers by player count
-            gameServers.Sort((a, b) => a.playerCount.CompareTo(b.playerCount));
-
-            // Find the first game server with a player count less than its maximum capacity
-            var availableServer =
-                gameServers.FirstOrDefault(server => server.playerCount + partySize <= server.maxCapacity);
-            // Return the available server
-            // If no available servers, return the server with the lowest player count
-            return availableServer ?? gameServers[0];
-        }
-
-        private static void ListenForHttpRequestsAsync(List<GameServer> gameServers,
-            CancellationToken cancellationToken)
-        {
-
-            var host = Dns.GetHostName();
-            var addresses = Dns.GetHostAddresses(host);
-            var ipv4Address = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
-            
-            var prefixes = new List<string>() {
-                
-                $"http://127.0.0.1:{WebPort}/",
-                $"http://localhost:{WebPort}/",
-                $"http://{ipv4Address}:{WebPort}/",
-                $"http://127.0.0.1:{WebPort}/"
-            };
-
-            HttpListener httpListener = new HttpListener();
-
-            foreach (var prefix in prefixes)
-            {
-                try
-                {
-                    httpListener.Prefixes.Add(prefix);
-                    httpListener.Start();
-                    TFConsole.WriteLine("Successfully started the listener on prefix: " + prefix, ConsoleColor.Green);
-                    break;
-                }
-                catch (HttpListenerException ex)
-                {
-                    TFConsole.WriteLine("Error adding prefix: " + prefix ,ConsoleColor.Red);
-                    TFConsole.WriteLine("Error message: " + ex.Message ,ConsoleColor.Red);
-                }
-            }
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                // Wait for a request to come in
-                var context = httpListener.GetContext();
-
-                // Get the request and response objects
-                var request = context.Request;
-                var response = context.Response;
-
-
-                // Get the request URL
-                
-                switch (request.HttpMethod)
-                {
-                    case "GET":
-                        var responseString = string.Empty;
-                        switch (request.Url.AbsolutePath.ToLower())
-                        {
-                            case "/status":
-                                responseString = "Server is running";
-                                var responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                response.ContentLength64 = responseBytes.Length;
-                                response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                                break;
-                            case "/admin-panel":
-                                // Build the response string for the admin panel
-                                responseString = "[";
-                                foreach (GameServer server in gameServers)
-                                {
-
-                                    string population;
-
-                                    if (server.playerCount >= server.maxCapacity * 0.8) population = "High";
-                                    else if (server.playerCount >= server.maxCapacity * 0.5) population = "Medium";
-                                    else population = "Low";
-
-
-
-                                    if (!server.isActive) continue;
-                                    string serverStatus;
-                                    if (server.playerCount == server.maxCapacity)
-                                        serverStatus = "full";
-                                    else
-                                        serverStatus = "active";
-
-                                    responseString += "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" +
-                                                      server.port + ",\"playerCount\":" + server.playerCount +
-                                                      ",\"maxCapacity\":" + server.maxCapacity + ",\"status\":\"" +
-                                                      serverStatus + "\",\"serverID\":\"" + server.ServerId +
-                                                      "\",\"population\":\"" + population + "\"},\n";
-
-                                }
-
-                                responseString = responseString.TrimEnd(',', '\n') + "]";
-                                responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                response.ContentLength64 = responseBytes.Length;
-                                response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                                break;
-                            case "/servers.html":
-                                // Get the assembly containing this code
-                                Assembly assembly = Assembly.GetExecutingAssembly();
-                                // Get the embedded resource stream (also ignore warning, will never be an issue)
-
-#pragma warning disable CS8600
-#pragma warning disable CS8604
-                                Stream resourceStream =
-                                    assembly.GetManifestResourceStream("MasterServer.servers.html");
-                                using (StreamReader reader = new StreamReader(resourceStream))
-                                {
-                                    // Read the contents of the HTML file
-                                    var html = reader.ReadToEnd();
-
-                                    // Set the response headers
-                                    response.ContentType = "text/html";
-                                    response.ContentLength64 = html.Length;
-
-
-                                    // Write the HTML to the response stream
-                                    StreamWriter writer = new StreamWriter(response.OutputStream);
-                                    writer.Write(html);
-                                    writer.Flush();
-                                    writer.Close();
-                                    break;
-                                }
-#pragma warning restore CS8600
-#pragma warning restore CS8604
-                            // Handle the request
-                            case "/list-servers":
-                                // Build the response string
-                                responseString = "Available game servers:\n";
-                                foreach (GameServer server in gameServers)
-                                {
-                                    responseString += "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" +
-                                                      server.port + ",\"playerCount\":" + server.playerCount +
-                                                      ",\"maxCapacity\":" + server.maxCapacity + "}\n";
-                                }
-
-                                responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                response.ContentLength64 = responseBytes.Length;
-                                response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                                break;
-
-                            case "/show-full-servers":
-                                // Build the response string
-                                responseString = "Full game servers:\n";
-                                foreach (GameServer server in gameServers)
-                                {
-                                    if (server.playerCount == server.maxCapacity)
-                                    {
-                                        responseString = "{\"ipAddress\":\"" + server.ipAddress + "\",\"port\":" +
-                                                         server.port + ",\"playerCount\":" + server.playerCount +
-                                                         ",\"maxCapacity\":" + server.maxCapacity + "}";
-                                    }
-                                }
-
-                                responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                response.ContentLength64 = responseBytes.Length;
-                                response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                                break;
-
-                            case "/connect":
-                                if (Settings.AllowServerJoining)
-                                {
-                                    responseString = string.Empty;
-
-                                    int partySize;
-                                    try
-                                    {
-                                        var partySizeString = request.QueryString["partySize"] ?? "";
-                                        partySize = int.Parse(partySizeString);
-                                    }
-                                    catch (FormatException)
-                                    {
-                                        TFConsole.WriteLine("Invalid party size", ConsoleColor.Red);
-                                        return;
-                                    }
-
-                                    var playfabId = request.QueryString["playfabId"] ?? "";
-                                    TFConsole.WriteLine(
-                                        $"Request from IP: {request.RemoteEndPoint} with party size: {partySize} {playfabId}");
-                                    try
-                                    {
-                                        ValidateRequest(playfabId);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        TFConsole.WriteLine(e.Message, ConsoleColor.Red);
-                                        responseString = e.Message;
-                                        responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                        response.ContentLength64 = responseBytes.Length;
-                                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                                        break;
-                                    }
-
-                                    // Validate token with PlayFab
-                                    var isPlayerBanned = ValidateRequest(playfabId);
-
-                                    if (!isPlayerBanned)
-                                    {
-                                        TFConsole.WriteLine("Player is banned", ConsoleColor.Red);
-                                        return;
-                                    }
-
-                                    var availableServer = GetAvailableServer((gameServers), partySize);
-                                    if (availableServer != null)
-                                    {
-                                        if (availableServer.playerCount < availableServer.maxCapacity)
-                                        {
-                                            responseString =
-                                                "{\"ipAddress\":\"" + availableServer.ipAddress + "\",\"port\":" +
-                                                availableServer.port + ",\"playerCount\":" +
-                                                availableServer.playerCount + ",\"maxCapacity\":" +
-                                                availableServer.maxCapacity + ",\"playfabId\":\"" +
-                                                playfabId + "\"}";
-                                            availableServer.playerCount += partySize;
-
-                                            TFConsole.WriteLine(
-                                                $"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}", ConsoleColor.Green);
-
-                                        }
-                                        else
-                                        {
-                                            responseString = "No available game servers";
-                                        }
-
-                                    }
-                                    else
-                                    {
-                                        var instancedID = string.Empty;
-                                        string serverID;
-                                        CreateDockerContainer(gameServers, string.Empty, null, out instancedID,
-                                            out serverID);
-                                        GameServer newServer = CreateNewServer(gameServers, string.Empty, null,
-                                            instancedID, serverID,false);
-                                        if (newServer != null)
-                                        {
-                                            responseString =
-                                                $"{{\"ipAddress\":\"{newServer.ipAddress}\", \"port\":{newServer.port}, \"playerCount\":{newServer.playerCount}, \"maxCapacity\":{newServer.maxCapacity}, \"InstancedID\":{newServer.instanceId}\"}}";
-                                            newServer.playerCount += partySize;
-                                        }
-                                        else
-                                        {
-                                            responseString = "Error creating new server";
-                                        }
-                                    }
-
-                                    responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                    response.ContentLength64 = responseBytes.Length;
-                                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                                }
-                                else
-                                {
-                                    responseString = "Server joining is disabled";
-                                    TFConsole.WriteLine("Server joining is disabled", ConsoleColor.Yellow);
-                                    responseBytes = Encoding.UTF8.GetBytes(responseString);
-                                    response.ContentLength64 = responseBytes.Length;
-                                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                                }
-
-                                break;
-                        }
-
-                        break;
-
-                    case "POST":
-                        var requestBody = new StreamReader(request.InputStream).ReadToEnd();
-                        var requestLines = requestBody.Split('\n');
-                        var requestData = requestLines.Select(line => line.Split('='))
-                            .ToDictionary(a => a[0], a => a[1]);
-
-                        // Update the game servers list with the new data
-                        gameServers.Add(new GameServer(requestData["ipAddress"], int.Parse(requestData["port"]),
-                            int.Parse(requestData["playerCount"]), int.Parse(requestData["maxCapacity"]),
-                            requestData["instanceId"], true, requestData["serverId"], false));
-
-                        // Send a response to the server
-                        var responseBody = "Received data from game server\n";
-                        var responseBodyBytes = Encoding.UTF8.GetBytes(responseBody);
-                        response.ContentLength64 = responseBodyBytes.Length;
-                        response.OutputStream.Write(responseBodyBytes, 0, responseBodyBytes.Length);
-                        break;
-                }
-            }
-        }
-
-        private static bool ValidateRequest(string playfabID)
-        {
-            if (!Settings.UsePlayFab) return true;
-            var adminAPISettings = new PlayFabApiSettings()
-            {
-                TitleId = Settings.PlayFabTitleID,
-                DeveloperSecretKey = Settings.DeveloperSecretKey
-            };
-
-            var authenticationApi = new PlayFabAdminInstanceAPI(adminAPISettings);
-
-
-            TFConsole.WriteLine("Validating Player " + playfabID);
-
-
-            var request = new GetUserBansRequest()
-            {
-                PlayFabId = playfabID
-            };
-
-            Task<PlayFabResult<GetUserBansResult>> task = authenticationApi.GetUserBansAsync(request);
-            task.Wait();
-
-            var response = task.Result;
-
-
-            var isBanned = response.Result.BanData.Count;
-
-            TFConsole.WriteLine($"Player has {isBanned} Ban(s) on Record");
-
-            if (isBanned > 0)
-            {
-                return false;
-            }
-
-            return true;
-
-        }
+        
 
         //Server Creation Stuff
-        private static GameServer CreateNewServer(List<GameServer> gameServers, string ip, int? port,
+        public static GameServer CreateNewServer(List<GameServer> gameServers, string ip, int? port,
             string InstancedID, string serverID, bool isStandby)
         {
             var serverIP = DefaultIp;
@@ -639,7 +270,7 @@ namespace ServerCommander
             return gameServer;
         }
 
-        private static void CreateDockerContainer(List<GameServer> gameServers, string? ip, int? port,
+        public static void CreateDockerContainer(List<GameServer> gameServers, string? ip, int? port,
             out string InstancedID, out string ServerID)
         {
             
@@ -750,7 +381,7 @@ namespace ServerCommander
                     if (server.playerCount != 0) continue;
                     if (!server.isStandby)
                     {
-                        _ = DeleteDockerContainer(gameServers, server.instanceId);
+                        _ = _dockerService.DeleteDockerContainer(server.instanceId);
                     }
                     else
                     {
@@ -760,130 +391,6 @@ namespace ServerCommander
 
                 gameServers.RemoveAll(server => server.playerCount == 0);
             }
-        }
-
-        public static async Task DeleteDockerContainerByPort(int port)
-        {
-            var endpointUrl = $"{Settings.DockerTcpNetwork}";
-
-            // Create a new DockerClient using the endpoint URL
-            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-
-            // Get the ID of the container to delete
-            var containerId = Servers.Find(server => server.port == port)?.instanceId;
-
-            // Delete the container
-            try
-            {
-                client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters { Force = true })
-                    .Wait();
-            }
-            catch (DockerApiException ex)
-            {
-                TFConsole.WriteLine($"Error deleting container: {ex.Message}",ConsoleColor.Red);
-            }
-        }
-
-        public static async Task StopAllDockerContainers()
-        {
-            var endpointUrl = $"{Settings.DockerTcpNetwork}";
-
-            // Create a new DockerClient using the endpoint URL
-            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-
-            var containers = client.Containers.ListContainersAsync(new ContainersListParameters()
-            {
-                All = true
-            }).Result;
-
-            try
-            {
-                foreach (var container in containers)
-                {
-                    if (container.Names != null)
-                    {
-                        if (container.Names[0].Contains("GameServer-Instance--"))
-                        {
-                            client.Containers.StopContainerAsync(container.ID, new ContainerStopParameters()
-                            {
-                                WaitBeforeKillSeconds = 10
-                            }).Wait();
-                        }
-                    }
-                }
-            }
-            catch (DockerApiException ex)
-            {
-                TFConsole.WriteLine($"Error stopping container: {ex.Message}",ConsoleColor.Red);
-            }
-        }
-
-        public static async Task StartAllDockerContainers()
-        {
-            var endpointUrl = $"{Settings.DockerTcpNetwork}";
-
-            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-
-            IList<ContainerListResponse> containers = client.Containers.ListContainersAsync(
-                new ContainersListParameters()
-                {
-                    All = true
-                }).Result;
-
-            try
-            {
-                foreach (var container in containers)
-                {
-                    if (container.Names != null)
-                    {
-                        if (container.Names[0].Contains("GameServer-Instance--"))
-                        {
-                            client.Containers.StartContainerAsync(container.ID, new ContainerStartParameters()
-                            {
-                            }).Wait();
-                        }
-                    }
-                }
-            }
-            catch (DockerApiException ex)
-            {
-                TFConsole.WriteLine($"Error stopping container: {ex.Message}",ConsoleColor.Red);
-            }
-        }
-
-        private static Task DeleteDockerContainer(List<GameServer> gameServers, string containerId)
-        {
-            // Set the API endpoint URL
-            var endpointUrl = $"{Settings.DockerTcpNetwork}";
-
-            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-
-
-            if (Settings.AllowServerDeletion)
-            {
-                // Delete the container by its ID
-                try
-                {
-                    client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters()).Wait();
-                }
-                catch (DockerApiException ex)
-                {
-                    TFConsole.WriteLine($"Error deleting container: {ex.Message}",ConsoleColor.Red);
-                }
-            }
-            else
-            {
-                try
-                {
-                    client.Containers.StopContainerAsync(containerId, new ContainerStopParameters()).Wait();
-                }
-                catch (DockerApiException ex)
-                {
-                    TFConsole.WriteLine($"Error stopping container: {ex.Message}",ConsoleColor.Red);
-                }
-            }
-
-            return Task.CompletedTask;
         }
 
         private static async void ListenForServers(List<GameServer> gameServers,

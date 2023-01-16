@@ -34,4 +34,21 @@ public class GameServer
         instanceId = "";
         ServerId = "";
     }
+    
+    public string GetPopulation()
+    {
+        float population = (float)playerCount / (float)maxCapacity;
+
+        return population switch
+        {
+            >= 0.8f => "High",
+            >= 0.5f => "Medium",
+            _ => "Low",
+        };
+    }
+    
+    public string GetStatus()
+    {
+        return isActive ? (playerCount == maxCapacity) ? "full":"active" : "offline";
+    }
 }
