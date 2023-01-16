@@ -8,7 +8,7 @@ This is Non-Production use, Alot of Functions are still Work In Progress and are
 
 ## Requirements
 
-- .NET Core 3.1
+- .NET Core 7
 - Docker with linux contains & tcp daemon enabled.
 - A Linux GameServer Docker Image with port 7777 Exposed - See [DockerFile](https://github.com/ZaviiNet-Studios/MasterServer-Console/blob/master/Dockerfile) for example
 ## Configuration Variables
