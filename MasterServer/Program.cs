@@ -169,6 +169,7 @@ namespace ServerCommander
             ListenForServersThread.Join();
             ListenForHttpRequestsThread.Join();
             CheckForEmptyServersThread.Join();
+            StopAllDockerContainers();
             
             // Save Current Settings To File
             Settings.SaveToDisk();
