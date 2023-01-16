@@ -12,7 +12,7 @@
             bool serverRestartOnCrash = default, bool serverRestartOnShutdown = default,
             bool serverRestartOnUpdate = default, bool serverRestartSchedule = default,
             string? serverRestartScheduleTime = null, int gameServerPortPool = default,
-            bool gameServerRandomPorts = default, string? playFabTitleID = null, string? developerSecretKey = null)
+            bool gameServerRandomPorts = default,bool usePlayFab = default ,string? playFabTitleID = null, string? developerSecretKey = null)
         {
             CreateInitialGameServers = createInitialGameServers;
             NumberofInitialGameServers = numberofInitialGameServers;
@@ -45,6 +45,7 @@
             ServerRestartScheduleTime = serverRestartScheduleTime;
             GameServerPortPool = gameServerPortPool;
             GameServerRandomPorts = gameServerRandomPorts;
+            UsePlayFab = usePlayFab;
             PlayFabTitleID = playFabTitleID;
             DeveloperSecretKey = developerSecretKey;
         }
@@ -87,6 +88,7 @@
         public bool CreateInitialGameServers { get; set; }
         public bool CreateStandbyGameServers { get; set; }
         
+        public bool UsePlayFab { get; set; }
         public string? PlayFabTitleID { get; set; }
         public string? DeveloperSecretKey { get; set; }
     }

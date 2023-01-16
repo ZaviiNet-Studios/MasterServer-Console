@@ -43,15 +43,13 @@
 <h1>Voids Adrift - Island Designer Active Server List</h1>
 <table id="server-list">
     <tr>
-        <th>IP Address</th>
-        <th>Port</th>
-        <th>Player Count</th>
+        <th>Server ID</th>
+        <th>Server Population</th>
         <th>Max Capacity</th>
         <th>Status</th>
     </tr>
     <tr>
-        <td id="ip-address-placeholder"></td>
-        <td id="port-placeholder"></td>
+        <td id ="serverId-placeholder"></td>
         <td id="player-count-placeholder"></td>
         <td id="max-capacity-placeholder"></td>
         <td id="status-placeholder"></td>
@@ -68,18 +66,15 @@
                 // Update the table with the data
                 for (var i = 0; i < data.length; i++) {
                     var row = document.createElement("tr");
-                    var ipCell = document.createElement("td");
-                    ipCell.innerHTML = data[i].ipAddress;
-                    var portCell = document.createElement("td");
-                    portCell.innerHTML = data[i].port;
+                    var serverIDCell = document.createElement("td");
+                    serverIDCell.innerHTML = data[i].serverID;
                     var playerCountCell = document.createElement("td");
-                    playerCountCell.innerHTML = data[i].playerCount;
+                    playerCountCell.innerHTML = data[i].population;
                     var maxCapacityCell = document.createElement("td");
                     maxCapacityCell.innerHTML = data[i].maxCapacity;
                     var statusCell = document.createElement("td");
                     statusCell.innerHTML = data[i].status;
-                    row.appendChild(ipCell);
-                    row.appendChild(portCell);
+                    row.appendChild(serverIDCell);
                     row.appendChild(playerCountCell);
                     row.appendChild(maxCapacityCell);
                     row.appendChild(statusCell);
