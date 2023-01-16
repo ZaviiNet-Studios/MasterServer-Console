@@ -19,21 +19,21 @@ namespace MasterServer
             public ConsoleColor? Color;
         }
 
-        private static ConcurrentQueue<writeItem> writeQueue = new ConcurrentQueue<writeItem>();
+        private static List<writeItem> writeQueue = new List<writeItem>();
 
         public static void WriteLine(string content, ConsoleColor? color = null)
         {
-            writeQueue.Enqueue(new writeItem(content, true, color));
+            writeQueue.Add(new writeItem(content, true, color));
         }
 
         public static void WriteLine()
         {
-            writeQueue.Enqueue(new writeItem("", true, null));
+            writeQueue.Add(new writeItem("", true, null));
         }
 
         public static void Write(string content, ConsoleColor? color = null)
         {
-            writeQueue.Enqueue(new writeItem(content, false, color));
+            writeQueue.Add(new writeItem(content, false, color));
         }
 
         public static void Start()
@@ -60,6 +60,8 @@ namespace MasterServer
                             Console.Write(item.Content);
 
                         Console.ResetColor();
+
+                        writeQueue.Remove(item);
                     }
                     catch { }
                 }
