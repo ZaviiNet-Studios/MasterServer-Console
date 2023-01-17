@@ -166,7 +166,9 @@ namespace ServerCommander
             CheckForEmptyServersCancellationToken.Cancel();
             ListenForServersThread.Join();
             CheckForEmptyServersThread.Join();
-            StopAllDockerContainers();
+            
+            // Stop All Docker Containers
+            _ = _dockerService.StopAllDockerContainers();
             
             // Stop Http Service
             _httpService.Stop();
