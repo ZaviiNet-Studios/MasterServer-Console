@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.org/projects/servercommander/badge/?version=latest)](https://servercommander.readthedocs.io/en/latest/?badge=latest) 
+
 
 # ServerCommander
 
