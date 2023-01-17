@@ -14,6 +14,7 @@ public class HttpService
 {
     private readonly int _port;
     private readonly MasterServerSettings _settings;
+    private static readonly DatabaseService _databaseService;
 
     private static Thread thread { get; set; }
     private static readonly CancellationTokenSource cancellationToken = new();
@@ -191,6 +192,7 @@ public class HttpService
                     var responseBytes = Encoding.UTF8.GetBytes(responseString);
                     response.ContentLength64 = responseBytes.Length;
                     response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                    _databaseService.UpdateGameServerPlayerNumbers(availableServer.playerCount, availableServer.ServerId);
 
                 }
                 else
@@ -206,7 +208,7 @@ public class HttpService
             {
                 var instancedID = string.Empty;
                 string serverID;
-                Program.CreateDockerContainer(gameServers, string.Empty, null, out instancedID,
+                Program.CreateDockerContainer(gameServers, null,string.Empty, null, out instancedID,
                     out serverID);
                 GameServer newServer = Program.CreateNewServer(gameServers, string.Empty, null,
                     instancedID, serverID, false);

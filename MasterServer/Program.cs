@@ -34,6 +34,7 @@ namespace ServerCommander
         
         private static readonly HttpService _httpService = new HttpService(WebPort, Settings);
         private static readonly DockerService _dockerService = new DockerService(Settings);
+        private static readonly DatabaseService _databaseService = new DatabaseService(Settings);
         
         public static DockerService DockerService => _dockerService;
         
@@ -43,19 +44,20 @@ namespace ServerCommander
         private static readonly CancellationTokenSource  CheckForEmptyServersCancellationToken = new CancellationTokenSource ();
 
         public static readonly CommandService CommandService = new CommandService();
-        private static readonly List<GameServer> Servers = new List<GameServer>();
+
+        //private static readonly List<GameServer> Servers = _databaseService.Servers;
         
-        public static List<GameServer> GetServers() => Servers;
+        public static List<GameServer> GetServers() => _databaseService.Servers;
         public static GameServer? GetServer(int port)
         {
-            return Servers.FirstOrDefault(server => server.port == port);
+            return _databaseService.Servers.FirstOrDefault(server => server.port == port);
         }
         public static void RemoveServer(int port)
         {
             GameServer? gameServer = GetServer(port);
             if (gameServer != null)
             {
-                Servers.Remove(gameServer);
+                _databaseService.Servers.Remove(gameServer);
             }
         }
         
@@ -63,17 +65,13 @@ namespace ServerCommander
         {
             Startup();
             
-            ListenForServersThread = new Thread(() => { ListenForServers(Servers, ListenForServersCancellationToken.Token); });
-            CheckForEmptyServersThread = new Thread(() => { CheckForEmptyServers(Servers, CheckForEmptyServersCancellationToken.Token); });
+            ListenForServersThread = new Thread(() => { ListenForServers(_databaseService.Servers, ListenForServersCancellationToken.Token); });
+            CheckForEmptyServersThread = new Thread(() => { CheckForEmptyServers(_databaseService.Servers, CheckForEmptyServersCancellationToken.Token); });
             
             ListenForServersThread.Start();
-            _httpService.Start(Servers);
+            _httpService.Start(_databaseService.Servers);
             CheckForEmptyServersThread.Start();
-
-
-            var partySize = 0;
-            CreateInitialGameServers(Servers, null, null, partySize);
-
+            
             RegisterCommands();
 
             PlayFabAdminAPI.ForgetAllCredentials();
@@ -145,14 +143,27 @@ namespace ServerCommander
             TFConsole.Start();
             TFConsole.WriteLine("Loading ServerCommander\n", ConsoleColor.Green);
             TFConsole.WriteLine($"Starting {Settings.MasterServerName}...\n", ConsoleColor.Green);
-            if (Settings.AllowServerDeletion)
-            {
-                _ = _dockerService.DeleteExistingDockerContainers();
-            }
+            // if (Settings.AllowServerDeletion)
+            // {
+            //     _ = _dockerService.DeleteExistingDockerContainers();
+            // }
             TFConsole.WriteLine("Deleting existing Docker containers..., please wait", ConsoleColor.Green);
             TFConsole.WriteLine($"Send POST Data To http://{Settings.MasterServerIp}:{Port}\n", ConsoleColor.Green);
             TFConsole.WriteLine("Waiting for Commands... type 'help' to get a list of commands\n", ConsoleColor.Green);
             TFConsole.WriteLine("Type Quit or Exit to Close Application.", ConsoleColor.Green);
+            if (!Settings.DatabaseCreated)
+            {
+                TFConsole.WriteLine("Creating Database...", ConsoleColor.Green);
+                _ = _databaseService.CreateDatabaseAndTable();
+            }
+            else
+            {
+                _ = _databaseService.LoadGameServersAsync();
+                TFConsole.WriteLine("Database Loading...", ConsoleColor.Green);
+            }
+            CheckDatabaseAgainstRunningServers(_databaseService.Servers);
+            TFConsole.WriteLine("Free GamePorts: " + _portPool, ConsoleColor.Green);
+            TFConsole.WriteLine("Done!", ConsoleColor.Green);
         }
 
         public static void Quit()
@@ -179,6 +190,86 @@ namespace ServerCommander
             Environment.Exit(0);
         }
 
+        private static void CheckDatabaseAgainstRunningServers(List<GameServer> gameServers)
+        {
+            var endpointUrl = $"{Settings.DockerTcpNetwork}";
+            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
+            var containers = client.Containers.ListContainersAsync(new ContainersListParameters()
+            {
+                All = true
+            }).Result;
+            
+            if (containers.Count == 0)
+            {
+                TFConsole.WriteLine("No Docker Containers Found", ConsoleColor.Red);
+                gameServers.Clear();
+                _ = _databaseService.RemoveAllGameServers();
+                var partySize = 0;
+                CreateInitialGameServers(_databaseService.Servers, null, null, partySize);
+            }
+            
+
+            try
+            {
+                TFConsole.WriteLine("Checking Database Against Running Servers...", ConsoleColor.Green);
+                foreach (var container in containers)
+                {
+                    var instanceId = container.ID;
+                    
+                    foreach (var name in container.Names)
+                    {
+                        if (name.Contains("GameServer") || container.State != "running")
+                        {
+                            var foundServer = gameServers.FirstOrDefault(server => server.instanceId == instanceId);
+
+                            var containerPort = foundServer.port;
+                            TFConsole.WriteLine($"Found Container: {name} with ID: {instanceId} and port {containerPort}, Server is Not Running Recreating Server", ConsoleColor.Green);
+                            _ = _dockerService.DeleteDockerContainerByID(instanceId);
+                            gameServers.Remove(foundServer);
+                            ReCreateServer(_databaseService.Servers, name,null, containerPort, 0);
+                        }
+                        if (!name.Contains("GameServer") || container.State != "running") continue;
+                        var gameServer = gameServers.FirstOrDefault(server => server.instanceId == instanceId);
+
+                        TFConsole.WriteLine("Checking Database Against Running Servers...", ConsoleColor.Green);
+                        if (gameServer == null)
+                        {
+                            TFConsole.WriteLine($"GameServer {instanceId} is running but not in the database",
+                                ConsoleColor.Green);
+                            if (Settings.AllowServerDeletion)
+                            {
+                                TFConsole.WriteLine($"Deleting Game Server {instanceId}", ConsoleColor.Green);
+                                _ = _dockerService.DeleteDockerContainerByID(instanceId);
+                            }
+                        }
+                        else
+                        {
+                            TFConsole.WriteLine($"GameServer {instanceId} is running and in the database",
+                                ConsoleColor.Green);
+                        }
+                    }
+                }
+                
+                
+                
+                
+            }
+            catch (Exception ex)
+            {
+                TFConsole.WriteLine(ex.Message, ConsoleColor.Red);
+            }
+        }
+
+        private static void ReCreateServer(List<GameServer> gameServers, string Name, string ip, int? port, int partySize)
+        {
+            string InstancedID;
+            string serverID;
+            
+            CreateDockerContainer(gameServers, Name,ip, port, out InstancedID, out serverID);
+            CreateNewServer(gameServers, ip, port, InstancedID, serverID, true);
+            TFConsole.WriteLine($"Game server created successfully - Number Created = {0}",ConsoleColor.Green);
+        }
+
         private static void CreateInitialGameServers(List<GameServer> gameServers, string ip, int? port,
             int partySize)
         {
@@ -187,14 +278,14 @@ namespace ServerCommander
 
                 var gameServersToBeCreated = InitialServers.numServers;
                 var gameServersCreated = 0;
-                var InstancedID = "";
+                string InstancedID;
                 string serverID;
                 if (!Settings.CreateInitialGameServers) return;
                 while (true)
                 {
                     if (gameServersCreated < gameServersToBeCreated)
                     {
-                        CreateDockerContainer(gameServers, ip, port, out InstancedID, out serverID);
+                        CreateDockerContainer(gameServers, null,ip, port, out InstancedID, out serverID);
                         CreateNewServer(gameServers, ip, port, InstancedID, serverID, true);
                         gameServersCreated++;
                     }
@@ -219,8 +310,8 @@ namespace ServerCommander
             string serverID;
             
 
-            CreateDockerContainer(Servers, ip, port, out InstancedID, out serverID);
-            CreateNewServer(Servers, ip, port, InstancedID, serverID, isStandby);
+            CreateDockerContainer(_databaseService.Servers, null,ip, port, out InstancedID, out serverID);
+            CreateNewServer(_databaseService.Servers, ip, port, InstancedID, serverID, isStandby);
         }
 
         private static GameServers? InitialDockerContainerSettings()
@@ -244,9 +335,6 @@ namespace ServerCommander
                 return JsonConvert.DeserializeObject<GameServers>(json);
             }
         }
-
-        
-
         //Server Creation Stuff
         public static GameServer CreateNewServer(List<GameServer> gameServers, string ip, int? port,
             string InstancedID, string serverID, bool isStandby)
@@ -264,12 +352,16 @@ namespace ServerCommander
             var gameServer = new GameServer(serverIP, serverPort, 0, Settings.MaxPlayersPerServer, InstancedID, true,
                 serverID, isStandby);
 
+            _ = _databaseService.SaveGameServer(serverIP, serverPort, 0, Settings.MaxPlayersPerServer,InstancedID, true,
+                serverID, isStandby);
+
             gameServers.Add(gameServer);
             _portPool++;
+            Settings.SaveToDisk();
             return gameServer;
         }
 
-        public static void CreateDockerContainer(List<GameServer> gameServers, string? ip, int? port,
+        public static void CreateDockerContainer(List<GameServer> gameServers, string? Name, string? ip, int? port,
             out string InstancedID, out string ServerID)
         {
             
@@ -291,6 +383,7 @@ namespace ServerCommander
             if(port != null)
                 HostPort = port.Value;
 
+            Name ??= $"GameServer-Instance--{_numServers}";
 
             try
             {
@@ -311,7 +404,7 @@ namespace ServerCommander
                             new CreateContainerParameters
                             {
                                 Image = imageName + ":" + imageTag,
-                                Name = $"GameServer-Instance--{_numServers}",
+                                Name = Name,
                                 Hostname = HostIP,
                                 Env = new List<string>
                                 {
@@ -431,6 +524,10 @@ namespace ServerCommander
                 gameServer.playerCount = playerCount;
 
                 TFConsole.WriteLine($"Received data from game server {serverID}: {playerCount} players",ConsoleColor.Green);
+                if (playerCount != 0)
+                {
+                    _ = _databaseService.UpdateGameServerPlayerNumbers(playerCount,serverID);
+                }
 
                 // Close the connection with the game server
                 client.Close();

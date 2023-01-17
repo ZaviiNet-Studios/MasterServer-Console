@@ -16,7 +16,7 @@ namespace ServerCommander.Settings.Config
             bool serverRestartOnCrash = default, bool serverRestartOnShutdown = default,
             bool serverRestartOnUpdate = default, bool serverRestartSchedule = default,
             string? serverRestartScheduleTime = null, int gameServerPortPool = default,
-            bool gameServerRandomPorts = default,bool usePlayFab = default ,string? playFabTitleID = null, string? developerSecretKey = null)
+            bool gameServerRandomPorts = default,bool usePlayFab = default ,string? playFabTitleID = null, string? developerSecretKey = null, string? databaseName = null, bool databaseCreated = default)
         {
             CreateInitialGameServers = createInitialGameServers;
             NumberofInitialGameServers = numberofInitialGameServers;
@@ -52,6 +52,8 @@ namespace ServerCommander.Settings.Config
             UsePlayFab = usePlayFab;
             PlayFabTitleID = playFabTitleID;
             DeveloperSecretKey = developerSecretKey;
+            DatabaseName = databaseName;
+            DatabaseCreated = databaseCreated;
         }
         
         public static MasterServerSettings Default => new MasterServerSettings
@@ -89,6 +91,8 @@ namespace ServerCommander.Settings.Config
             UsePlayFab = false,
             PlayFabTitleID = null,
             DeveloperSecretKey = null,
+            DatabaseName = "mydb.sqlite",
+            DatabaseCreated = false
         };
         
         public static MasterServerSettings GetFromDisk(string filePath = DefaultFilePath)
@@ -156,5 +160,9 @@ namespace ServerCommander.Settings.Config
         public bool UsePlayFab { get; set; }
         public string? PlayFabTitleID { get; set; }
         public string? DeveloperSecretKey { get; set; }
+        
+        public string? DatabaseName { get; set; }
+        
+        public bool DatabaseCreated { get; set; }
     }
 }

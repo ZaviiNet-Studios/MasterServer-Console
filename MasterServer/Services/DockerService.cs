@@ -137,6 +137,28 @@ public class DockerService
                 TFConsole.WriteLine($"Error deleting container: {ex.Message}",ConsoleColor.Red);
             }
         }
+        
+        public async Task DeleteDockerContainerByID(string id)
+        {
+            var endpointUrl = $"{_settings.DockerTcpNetwork}";
+
+            // Create a new DockerClient using the endpoint URL
+            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
+
+            // Get the ID of the container to delete
+            var containerId = id;
+
+            // Delete the container
+            try
+            {
+                client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters { Force = true })
+                    .Wait();
+            }
+            catch (DockerApiException ex)
+            {
+                TFConsole.WriteLine($"Error deleting container: {ex.Message}",ConsoleColor.Red);
+            }
+        }
 
 
         public Task DeleteDockerContainer(string containerId)
