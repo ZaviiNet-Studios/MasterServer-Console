@@ -154,33 +154,15 @@ public class HttpService
         var responseString = string.Empty;
         if (_settings.AllowServerJoining)
         {
-
-            int partySize;
-            try
-            {
-                var partySizeString = request.QueryString["partySize"] ?? "";
-                partySize = int.Parse(partySizeString);
-            }
-            catch (FormatException)
-            {
-                TFConsole.WriteLine("Invalid party size", ConsoleColor.Red);
-                return;
-            }
+            var partySizeString = request.QueryString["partySize"] ?? "";
+            var partySize = int.Parse(partySizeString);
 
             var playfabId = request.QueryString["playfabId"] ?? "";
             TFConsole.WriteLine(
                 $"Request from IP: {request.RemoteEndPoint} with party size: {partySize} {playfabId}");
-            try
-            {
-                ValidateRequest(playfabId);
-            }
-            catch (Exception e)
-            {
-                TFConsole.WriteLine(e.Message, ConsoleColor.Red);
-                responseString = e.Message;
-                return;
-            }
-
+            
+            ValidateRequest(playfabId);
+            
             // Validate token with PlayFab
             var isPlayerBanned = ValidateRequest(playfabId);
 
@@ -195,22 +177,28 @@ public class HttpService
             {
                 if (availableServer.playerCount < availableServer.maxCapacity)
                 {
-                    responseString =
-                        "{\"ipAddress\":\"" + availableServer.ipAddress + "\",\"port\":" +
-                        availableServer.port + ",\"playerCount\":" +
-                        availableServer.playerCount + ",\"maxCapacity\":" +
-                        availableServer.maxCapacity + ",\"playfabId\":\"" +
-                        playfabId + "\"}";
+                    if (partySize == 0)
+                    {
+                        partySize = 1;
+                    }
+                    
                     availableServer.playerCount += partySize;
-
+                    responseString = "{\"ipAddress\":\"" + availableServer.ipAddress + "\",\"port\":" + availableServer.port + ",\"ServerId\":\"" + availableServer.ServerId + "\",\"playerCount\":\"" + availableServer.playerCount + "\"}";
+                    
                     TFConsole.WriteLine(
                         $"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}",
                         ConsoleColor.Green);
+                    var responseBytes = Encoding.UTF8.GetBytes(responseString);
+                    response.ContentLength64 = responseBytes.Length;
+                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
 
                 }
                 else
                 {
                     responseString = "No available game servers";
+                    var responseBytes = Encoding.UTF8.GetBytes(responseString);
+                    response.ContentLength64 = responseBytes.Length;
+                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                 }
 
             }
@@ -227,10 +215,16 @@ public class HttpService
                     responseString =
                         $"{{\"ipAddress\":\"{newServer.ipAddress}\", \"port\":{newServer.port}, \"playerCount\":{newServer.playerCount}, \"maxCapacity\":{newServer.maxCapacity}, \"InstancedID\":{newServer.instanceId}\"}}";
                     newServer.playerCount += partySize;
+                    var responseBytes = Encoding.UTF8.GetBytes(responseString);
+                    response.ContentLength64 = responseBytes.Length;
+                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                 }
                 else
                 {
                     responseString = "Error creating new server";
+                    var responseBytes = Encoding.UTF8.GetBytes(responseString);
+                    response.ContentLength64 = responseBytes.Length;
+                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                 }
             }
         }
@@ -238,6 +232,10 @@ public class HttpService
         {
             responseString = "Server joining is disabled";
             TFConsole.WriteLine("Server joining is disabled", ConsoleColor.Yellow);
+            var responseBytes = Encoding.UTF8.GetBytes(responseString);
+            response.ContentLength64 = responseBytes.Length;
+            response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+            
         }
     }
 

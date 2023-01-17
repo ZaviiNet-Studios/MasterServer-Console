@@ -1,14 +1,11 @@
 ﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
-using System.Text;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using MasterServer;
 using Newtonsoft.Json;
 using PlayFab;
-using PlayFab.AdminModels;
 using ServerCommander.Classes;
 using ServerCommander.Commands;
 using ServerCommander.Services;
@@ -382,14 +379,14 @@ namespace ServerCommander
                     if (!server.isStandby)
                     {
                         _ = _dockerService.DeleteDockerContainer(server.instanceId);
+                        TFConsole.WriteLine($"Server {server.instanceId} has been deleted", ConsoleColor.Yellow);
+                        gameServers.RemoveAll(server => server.playerCount == 0);
                     }
                     else
                     {
                         TFConsole.WriteLine("Standby Server Detected, Not Deleting" ,ConsoleColor.Yellow);
                     }
                 }
-
-                gameServers.RemoveAll(server => server.playerCount == 0);
             }
         }
 
@@ -419,16 +416,15 @@ namespace ServerCommander
                 // Extract the server ID and player count from the dynamic object
                 var serverID = values.serverID;
                 var playerCount = values.playerCount;
-
+                
                 // Find the game server with the matching server ID
-                var gameServer = gameServers.Find(server => server.ServerId == (string)values["serverID"]);
-
-                if (gameServer == null)
+                var gameServer = gameServers.Find(server => server.ServerId == (string)values["serverID"]); 
+                if (gameServer==null)
                 {
                     TFConsole.WriteLine($"Received data from unknown game server: {serverID}",ConsoleColor.Red);
                     continue;
                 }
-
+                
                 // Update the game server's player count
                 gameServer.playerCount = playerCount;
 

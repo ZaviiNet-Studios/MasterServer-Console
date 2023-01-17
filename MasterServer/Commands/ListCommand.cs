@@ -16,7 +16,7 @@ public class ListCommand : IConsoleCommand
         foreach (GameServer server in Program.GetServers())
         {
             TFConsole.WriteLine(
-                $"[{server.instanceId}] {server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})");
+                $"[{server.ServerId}] {server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})");
         }
         return Task.CompletedTask;
     }
