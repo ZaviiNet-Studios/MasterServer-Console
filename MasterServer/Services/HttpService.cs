@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using PlayFab;
@@ -44,16 +45,20 @@ public class HttpService
         var addresses = Dns.GetHostAddresses(host);
         var ipv4Address = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
 
-        var prefixes = new List<string>()
+        var prefixes = new List<string>();
+        
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
+            prefixes.Add($"http://*:{_port}/");
+            prefixes.Add($"http://localhost:{_port}/");
+        }
+        else
+        {
+            prefixes.Add($"http://127.0.0.1:{_port}/");
+            prefixes.Add($"http://{ipv4Address}:{_port}/");
+        }
 
-            $"http://127.0.0.1:{_port}/",
-            $"http://localhost:{_port}/",
-            $"http://{ipv4Address}:{_port}/",
-            $"http://127.0.0.1:{_port}/"
-        };
-
-        HttpListener httpListener = new HttpListener();
+        var httpListener = new HttpListener();
 
         foreach (var prefix in prefixes)
         {

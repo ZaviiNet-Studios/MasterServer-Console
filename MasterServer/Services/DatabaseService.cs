@@ -105,54 +105,73 @@ public class DatabaseService
         {
             connection.Open();
 
-            var command = new SQLiteCommand(connection);
-            command.CommandText =
-                $"INSERT INTO GameServer (ipAddress, port, playerCount, maxCapacity, instanceId, isActive, serverId, isStandby) VALUES ('{IpAddress}', {Port}, {PlayerCount}, {MaxCapacity}, '{InstanceId}', {IsActive}, '{ServerId}', {IsStandby})";
-            command.ExecuteNonQuery();
-            connection.Close();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "INSERT INTO GameServer (ipAddress, port, playerCount, maxCapacity, instanceId, isActive, serverId, isStandby) VALUES (@ipAddress, @port, @playerCount, @maxCapacity, @instanceId, @isActive, @serverId, @isStandby)";
+                command.Parameters.AddWithValue("@ipAddress", IpAddress);
+                command.Parameters.AddWithValue("@port", Port);
+                command.Parameters.AddWithValue("@playerCount", PlayerCount);
+                command.Parameters.AddWithValue("@maxCapacity", MaxCapacity);
+                command.Parameters.AddWithValue("@instanceId", InstanceId);
+                command.Parameters.AddWithValue("@isActive", IsActive);
+                command.Parameters.AddWithValue("@serverId", ServerId);
+                command.Parameters.AddWithValue("@isStandby", IsStandby);
+                await command.ExecuteNonQueryAsync();
+            }
         }
     }
-    
+
     public async Task UpdateGameServer(string IpAddress, int Port, int PlayerCount, int MaxCapacity,
         string InstanceId, bool IsActive, string ServerId, bool IsStandby)
     {
         using (var connection = new SQLiteConnection($"Data Source={_settings.DatabaseName};Version=3;"))
         {
-            connection.Open();
-
-            var command = new SQLiteCommand(connection);
-            command.CommandText =
-                $"UPDATE GameServer SET ipAddress = '{IpAddress}', port = {Port}, playerCount = {PlayerCount}, maxCapacity = {MaxCapacity}, instanceId = '{InstanceId}', isActive = {IsActive}, serverId = '{ServerId}', isStandby = {IsStandby} WHERE ipAddress = '{IpAddress}' AND port = {Port}";
-            command.ExecuteNonQuery();
-            connection.Close();
+            await connection.OpenAsync();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "UPDATE GameServer SET ipAddress = @ipAddress, port = @port, playerCount = @playerCount, maxCapacity = @maxCapacity, instanceId = @instanceId, isActive = @isActive, serverId = @serverId, isStandby = @isStandby WHERE ipAddress = @ipAddress AND port = @port";
+                command.Parameters.AddWithValue("@ipAddress", IpAddress);
+                command.Parameters.AddWithValue("@port", Port);
+                command.Parameters.AddWithValue("@playerCount", PlayerCount);
+                command.Parameters.AddWithValue("@maxCapacity", MaxCapacity);
+                command.Parameters.AddWithValue("@instanceId", InstanceId);
+                command.Parameters.AddWithValue("@isActive", IsActive);
+                command.Parameters.AddWithValue("@serverId", ServerId);
+                command.Parameters.AddWithValue("@isStandby", IsStandby);
+                await command.ExecuteNonQueryAsync();
+            }
         }
     }
+
 
     public async Task UpdateGameServerPlayerNumbers(int playercount, string ServerId)
     {
         using (var connection = new SQLiteConnection($"Data Source={_settings.DatabaseName};Version=3;"))
         {
             await connection.OpenAsync();
-            var command = new SQLiteCommand("UPDATE GameServer SET playerCount = @playercount WHERE serverId = @ServerId", connection);
-            command.Parameters.AddWithValue("@playercount", playercount);
-            command.Parameters.AddWithValue("@ServerId", ServerId);
-            await command.ExecuteNonQueryAsync();
-            connection.Close();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "UPDATE GameServer SET playerCount = @playercount WHERE serverId = @ServerId";
+                command.Parameters.AddWithValue("@playercount", playercount);
+                command.Parameters.AddWithValue("@ServerId", ServerId);
+                await command.ExecuteNonQueryAsync();
+            }
         }
     }
-    
+
     public async Task RemoveAllGameServers()
     {
         using (var connection = new SQLiteConnection($"Data Source={_settings.DatabaseName};Version=3;"))
         {
-            connection.Open();
-
-            var command = new SQLiteCommand(connection);
-            command.CommandText = "DELETE FROM GameServer";
-            command.ExecuteNonQuery();
-            connection.Close();
+            await connection.OpenAsync();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "DELETE FROM GameServer";
+                await command.ExecuteNonQueryAsync();
+            }
         }
 
         _settings.GameServerPortPool = 5100;
     }
+
 }
