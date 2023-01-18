@@ -136,6 +136,8 @@ namespace ServerCommander
             CommandService.RegisterCommand(new OverwriteCommand());
             CommandService.RegisterCommand(new ListCommand());
             CommandService.RegisterCommand(new RemoveServerCommand());
+            CommandService.RegisterCommand(new CreateBasicServerCommand());
+            CommandService.RegisterCommand(new CreateStandyServerCommand());
         }
 
         private static void Startup()
@@ -156,9 +158,92 @@ namespace ServerCommander
                 _ = _databaseService.LoadGameServersAsync();
                 TFConsole.WriteLine("Database Loading...", ConsoleColor.Green);
             }
-            _ = _dockerService.CheckDatabaseAgainstRunningServers(_databaseService.Servers);
+            _ = CheckDatabaseAgainstRunningServers(_databaseService.Servers);
             TFConsole.WriteLine("Done!", ConsoleColor.Green);
         }
+
+
+        private static async Task CheckDatabaseAgainstRunningServers(List<GameServer> gameServers)
+        {
+            var endpointUrl = $"{Settings.DockerTcpNetwork}";
+
+            // Create a new DockerClient using the endpoint URL
+            var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
+
+            var containers = client.Containers.ListContainersAsync(new ContainersListParameters()
+            {
+                All = true
+            }).Result;
+
+            if (containers.Count == 0)
+            {
+                foreach (var container in containers)
+                {
+                    if (!container.Names.Any(name => name.Contains("GameServer")))
+                    {
+                        TFConsole.WriteLine("No GameServers Found", ConsoleColor.Red);
+                        gameServers.Clear();
+                        _ = _databaseService.RemoveAllGameServers();
+                        CreateInitialGameServers(_databaseService.Servers, null, null, 0);
+                        return;
+                    }
+                }
+                TFConsole.WriteLine("No Docker Containers Found", ConsoleColor.Red);
+                gameServers.Clear();
+                _ = _databaseService.RemoveAllGameServers();
+                CreateInitialGameServers(_databaseService.Servers, null, null, 0);
+                TFConsole.WriteLine("Created Initial GameServers", ConsoleColor.Green);
+            }
+            
+            try
+            {
+                TFConsole.WriteLine("Checking Database Against Running Servers...", ConsoleColor.Green);
+                foreach (var container in containers)
+                {
+                    var instanceId = container.ID;
+
+                    if (!container.Names.Any(name => name.Contains("GameServer")) || container.State != "running")
+                    {
+                        continue;
+                    }
+
+                    var gameServer = gameServers.FirstOrDefault(server => server.instanceId == instanceId);
+
+                    if (gameServer == null)
+                    {
+                        if (Settings.AllowServerDeletion)
+                        {
+                            TFConsole.WriteLine($"Deleting Game Server {instanceId}", ConsoleColor.Green);
+                            _ = _dockerService.DeleteDockerContainerByID(instanceId);
+                        }
+                    }
+                    else
+                    {
+                        var containerPort = gameServer.port;
+                        TFConsole.WriteLine(
+                            $"Found Container: {container.Names.First()} with ID: {instanceId} and port {containerPort}, Recreating Server",
+                            ConsoleColor.Green);
+                        _ = _dockerService.DeleteDockerContainerByID(instanceId);
+                        _ = _databaseService.RemoveAllGameServers();
+                        gameServers.Remove(gameServer);
+                        ReCreateServer(_databaseService.Servers, container.Names.First(), null, containerPort, 0);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                TFConsole.WriteLine(ex.Message, ConsoleColor.Red);
+            }
+            
+            if (containers.Count == 1)
+            {
+                TFConsole.WriteLine("Number of Standby Servers is less than the number of Standby Servers in the Database, ReCreating All Servers", ConsoleColor.Green);
+                _ = _databaseService.RemoveAllGameServers();
+                gameServers.Clear();
+                _ = _dockerService.DeleteExistingDockerContainers();
+                CreateInitialGameServers(_databaseService.Servers, null, null, 0);
+            }
+    }
 
         public static void Quit()
         {
@@ -194,7 +279,7 @@ namespace ServerCommander
             TFConsole.WriteLine("Game server created successfully", ConsoleColor.Green);
         }
 
-        public static void CreateInitialGameServers(List<GameServer> gameServers, string ip, int? port,
+        private static void CreateInitialGameServers(List<GameServer> gameServers, string ip, int? port,
             int partySize)
         {
             if (_isRunning)
@@ -400,8 +485,9 @@ namespace ServerCommander
                     if (!server.isStandby)
                     {
                         _ = _dockerService.DeleteDockerContainer(server.instanceId);
-                        TFConsole.WriteLine($"Server {server.instanceId} has been deleted", ConsoleColor.Yellow);
+                        _ = _databaseService.RemoveGameServerByInstanceID(server.instanceId);
                         gameServers.RemoveAll(server => server.playerCount == 0);
+                        TFConsole.WriteLine($"Server {server.instanceId} has been deleted", ConsoleColor.Yellow);
                     }
                     else
                     {

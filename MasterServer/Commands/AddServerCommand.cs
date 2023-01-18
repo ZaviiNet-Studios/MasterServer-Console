@@ -11,8 +11,8 @@ public class AddServerCommand : IConsoleCommand
     public async Task ExecuteAsync(string[] args)
     {
         string? serverName = (args.Length>= 1) ? args[0] : null;
-        string? ipaddress = (args.Length >= 2) ? args[1] : null;
-        int? port = (args.Length >= 3) ? int.Parse(args[2]) : null;
+        string ipaddress = String.Empty;
+        int port = 0;
 
         while (string.IsNullOrEmpty(serverName))
         {
@@ -36,7 +36,7 @@ public class AddServerCommand : IConsoleCommand
                 ipaddress = addIpAddress;
             }else
             {
-                TFConsole.WriteLine("IP address cannot be empty");
+                ipaddress = null;
             }
         }
 
@@ -54,7 +54,7 @@ public class AddServerCommand : IConsoleCommand
             }
         }
 
-        Program.CreateGameServers(ipaddress, port!.Value, 0, false);
+        Program.CreateGameServers(ipaddress, port, 0, false);
 
         TFConsole.WriteLine(
             $"Added game server at {ipaddress}:{port} with InstanceID");

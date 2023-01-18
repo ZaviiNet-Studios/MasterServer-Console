@@ -119,19 +119,32 @@ public class HttpService
                 case "POST":
                     var requestBody = new StreamReader(request.InputStream).ReadToEnd();
                     var requestLines = requestBody.Split('\n');
+
                     var requestData = requestLines.Select(line => line.Split('='))
                         .ToDictionary(a => a[0], a => a[1]);
 
-                    // Update the game servers list with the new data
-                    gameServers.Add(new GameServer(requestData["ipAddress"], int.Parse(requestData["port"]),
-                        int.Parse(requestData["playerCount"]), int.Parse(requestData["maxCapacity"]),
-                        requestData["instanceId"], true, requestData["serverId"], false));
+                    if (requestData.ContainsKey("ipAddress"))
+                    {
+                        var ipAddress = requestData["ipAddress"];
+                        // Update the game servers list with the new data
+                        gameServers.Add(new GameServer(ipAddress, int.Parse(requestData["port"]),
+                            int.Parse(requestData["playerCount"]), int.Parse(requestData["maxCapacity"]),
+                            requestData["instanceId"], true, requestData["serverId"], false));
 
-                    // Send a response to the server
-                    var responseBody = "Received data from game server\n";
-                    var responseBodyBytes = Encoding.UTF8.GetBytes(responseBody);
-                    response.ContentLength64 = responseBodyBytes.Length;
-                    response.OutputStream.Write(responseBodyBytes, 0, responseBodyBytes.Length);
+                        // Send a response to the server
+                        var responseBody = "Received data from game server\n";
+                        var responseBodyBytes = Encoding.UTF8.GetBytes(responseBody);
+                        response.ContentLength64 = responseBodyBytes.Length;
+                        response.OutputStream.Write(responseBodyBytes, 0, responseBodyBytes.Length);
+                    }
+                    else
+                    {
+                        var responseBody = "Invalid request\n";
+                        var responseBodyBytes = Encoding.UTF8.GetBytes(responseBody);
+                        response.ContentLength64 = responseBodyBytes.Length;
+                        response.OutputStream.Write(responseBodyBytes, 0, responseBodyBytes.Length);
+                        TFConsole.WriteLine("Invalid request", ConsoleColor.Red);
+                    }
                     break;
             }
         }
@@ -157,6 +170,18 @@ public class HttpService
     void ConnectEndpoint(HttpListenerRequest request, HttpListenerResponse response,
         List<GameServer> gameServers)
     {
+        var externalIP = string.Empty;
+
+        try
+        {
+            externalIP = Dns.GetHostEntry(Dns.GetHostName()).AddressList.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork).ToString();
+        }
+        catch (Exception ex)
+        {
+            TFConsole.WriteLine("Error getting external IP: " + ex.Message, ConsoleColor.Red);
+        }
+        
+        
         var responseString = string.Empty;
         if (_settings.AllowServerJoining)
         {
@@ -189,7 +214,7 @@ public class HttpService
                     }
                     
                     availableServer.playerCount += partySize;
-                    responseString = "{\"ipAddress\":\"" + availableServer.ipAddress + "\",\"port\":" + availableServer.port + ",\"ServerId\":\"" + availableServer.ServerId + "\",\"playerCount\":\"" + availableServer.playerCount + "\"}";
+                    responseString = "{\"ipAddress\":\"" + externalIP + "\",\"port\":" + availableServer.port + ",\"ServerId\":\"" + availableServer.ServerId + "\",\"playerCount\":\"" + availableServer.playerCount + "\"}";
                     
                     TFConsole.WriteLine(
                         $"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}",
@@ -197,7 +222,7 @@ public class HttpService
                     var responseBytes = Encoding.UTF8.GetBytes(responseString);
                     response.ContentLength64 = responseBytes.Length;
                     response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-                    _databaseService.UpdateGameServerPlayerNumbers(availableServer.playerCount, availableServer.ServerId);
+                    //_ = _databaseService.UpdateGameServerPlayerNumbers(availableServer.playerCount, availableServer.ServerId);
 
                 }
                 else

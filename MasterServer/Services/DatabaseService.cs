@@ -158,6 +158,20 @@ public class DatabaseService
             }
         }
     }
+    
+    public async Task RemoveGameServerByInstanceID(string InstanceId)
+    {
+        using (var connection = new SQLiteConnection($"Data Source={_settings.DatabaseName};Version=3;"))
+        {
+            await connection.OpenAsync();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "DELETE FROM GameServer WHERE instanceId = @InstanceId";
+                command.Parameters.AddWithValue("@InstanceId", InstanceId);
+                await command.ExecuteNonQueryAsync();
+            }
+        }
+    }
 
     public async Task RemoveAllGameServers()
     {
