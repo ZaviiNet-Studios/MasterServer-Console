@@ -15,7 +15,7 @@ public class HttpService
     private readonly int _port;
     private readonly MasterServerSettings _settings;
 
-    private static Thread thread { get; set; }
+    private static Thread? thread { get; set; }
     private static readonly CancellationTokenSource cancellationToken = new();
 
     public HttpService(int port, MasterServerSettings settings)
@@ -84,7 +84,7 @@ public class HttpService
             switch (request.HttpMethod)
             {
                 case "GET":
-                    switch (request.Url.AbsolutePath.ToLower())
+                    switch (request.Url?.AbsolutePath.ToLower())
                     {
                         case "/status":
                             var responseBytes = Encoding.UTF8.GetBytes("Server is running");
