@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-
-namespace MasterServer
+﻿namespace ServerCommander
 {
 
     internal class TFConsole

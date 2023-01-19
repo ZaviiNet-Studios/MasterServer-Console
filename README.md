@@ -1,14 +1,14 @@
 
-# Master Server Console Application
+# ServerCommander
 
-This console application allows you to manage a list of game servers and perform various actions on them, such as adding or deleting servers from the list, and creating or deleting Docker containers.
+ServerCommander allows you to manage a list of game servers and perform various actions on them, such as adding or deleting servers from the list, and creating or deleting Docker containers.
 
 This is Non-Production use, Alot of Functions are still Work In Progress and are not ready.
 
 
 ## Requirements
 
-- .NET Core 3.1
+- .NET Core 7
 - Docker with linux contains & tcp daemon enabled.
 - A Linux GameServer Docker Image with port 7777 Exposed - See [DockerFile](https://github.com/ZaviiNet-Studios/MasterServer-Console/blob/master/Dockerfile) for example
 ## Configuration Variables
@@ -132,6 +132,7 @@ The console application uses the .NET HTTPClient library to make API requests. E
 ## Authors
 
 - [@ZaviiNet](https://github.com/ZaviiNet)
+- [@GTextreme169](https://github.com/GTextreme169)
 
 ## Contributors
 
