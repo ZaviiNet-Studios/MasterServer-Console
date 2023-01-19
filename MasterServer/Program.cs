@@ -186,21 +186,25 @@ namespace ServerCommander
                 int gameServersToBeCreated = InitialServers?.numServers ?? 2;
                 int gameServersCreated = 0;
                 if (!Settings.CreateInitialGameServers) return;
-                while (true)
+
+                for (int i = 0; i < gameServersToBeCreated; i++)
                 {
-                    if (gameServersCreated < gameServersToBeCreated)
+                    try
                     {
                         CreateDockerContainer(gameServers, ip, port, out string InstancedID, out string serverID);
                         CreateNewServer(gameServers, ip, port, InstancedID, serverID, true);
                         gameServersCreated++;
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        TFConsole.WriteLine(
-                            $"Initial game servers created successfully - Number Created = {0} {gameServersCreated}",ConsoleColor.Green);
-                        break;
+                        TFConsole.WriteLine($"Failed to start server: {ex.Message}", ConsoleColor.Red);
                     }
                 }
+
+                if (gameServersCreated > 0)
+                    TFConsole.WriteLine($"Initial game servers created successfully - Number Created = {gameServersCreated}", ConsoleColor.Green);
+                else
+                    TFConsole.WriteLine("Failed to create servers", ConsoleColor.Red);
             }
             else
             {
@@ -212,9 +216,14 @@ namespace ServerCommander
         {
             // This is not implemented yet?
             //int gameServersToBeCreated = InitialServers?.numServers ?? 2;
-
-            CreateDockerContainer(Servers, ip, port, out string InstancedID, out string serverID);
-            CreateNewServer(Servers, ip, port, InstancedID, serverID, isStandby);
+            try
+            {
+                CreateDockerContainer(Servers, ip, port, out string InstancedID, out string serverID);
+                CreateNewServer(Servers, ip, port, InstancedID, serverID, isStandby);
+            }catch (Exception ex) 
+            {
+                TFConsole.WriteLine(ex.Message, ConsoleColor.Red);
+            }
         }
 
         private static GameServers? InitialDockerContainerSettings()
@@ -340,9 +349,8 @@ namespace ServerCommander
             }
             catch (Exception e)
             {
-                TFConsole.WriteLine("Error Creating Server, Check Docker is Running/ Check Connection Settings are Correct" ,ConsoleColor.Red);
-                TFConsole.WriteLine(e.Message);
-                InstancedID = string.Empty;
+                Debug.WriteLine(e.Message);
+                throw new Exception("Error Creating Server, Check Docker is Running/ Check Connection Settings are Correct");
             }
         }
         
