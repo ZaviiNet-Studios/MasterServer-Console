@@ -15,7 +15,7 @@ public class HttpService
     private readonly int _port;
     private readonly MasterServerSettings _settings;
 
-    private static Thread thread { get; set; }
+    private static Thread? thread { get; set; }
     private static readonly CancellationTokenSource cancellationToken = new();
 
     public HttpService(int port, MasterServerSettings settings)
@@ -84,7 +84,7 @@ public class HttpService
             switch (request.HttpMethod)
             {
                 case "GET":
-                    switch (request.Url.AbsolutePath.ToLower())
+                    switch (request.Url?.AbsolutePath.ToLower())
                     {
                         case "/status":
                             var responseBytes = Encoding.UTF8.GetBytes("Server is running");
@@ -204,25 +204,31 @@ public class HttpService
             }
             else
             {
-                var instancedID = string.Empty;
-                string serverID;
-                Program.CreateDockerContainer(gameServers, string.Empty, null, out instancedID,
-                    out serverID);
-                GameServer newServer = Program.CreateNewServer(gameServers, string.Empty, null,
-                    instancedID, serverID, false);
-                if (newServer != null)
+                try
                 {
-                    responseString =
-                        $"{{\"ipAddress\":\"{newServer.ipAddress}\", \"port\":{newServer.port}, \"playerCount\":{newServer.playerCount}, \"maxCapacity\":{newServer.maxCapacity}, \"InstancedID\":{newServer.instanceId}\"}}";
-                    newServer.playerCount += partySize;
-                    var responseBytes = Encoding.UTF8.GetBytes(responseString);
-                    response.ContentLength64 = responseBytes.Length;
-                    response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                    string serverID;
+                    Program.CreateDockerContainer(gameServers, string.Empty, null, out string instancedID,
+                        out serverID);
+                    GameServer newServer = Program.CreateNewServer(gameServers, string.Empty, null,
+                        instancedID, serverID, false);
+                    if (newServer != null)
+                    {
+                        responseString =
+                            $"{{\"ipAddress\":\"{newServer.ipAddress}\", \"port\":{newServer.port}, \"playerCount\":{newServer.playerCount}, \"maxCapacity\":{newServer.maxCapacity}, \"InstancedID\":{newServer.instanceId}\"}}";
+                        newServer.playerCount += partySize;
+                        var responseBytes = Encoding.UTF8.GetBytes(responseString);
+                        response.ContentLength64 = responseBytes.Length;
+                        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
+                    }
+                    else
+                    {
+                        throw new Exception();
+                    }
                 }
-                else
+                catch
                 {
                     responseString = "Error creating new server";
-                    var responseBytes = Encoding.UTF8.GetBytes(responseString);
+                    byte[] responseBytes = Encoding.UTF8.GetBytes(responseString);
                     response.ContentLength64 = responseBytes.Length;
                     response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
                 }
