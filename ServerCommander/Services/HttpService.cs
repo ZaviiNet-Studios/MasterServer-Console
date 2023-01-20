@@ -207,9 +207,9 @@ public class HttpService
                 try
                 {
                     string serverID;
-                    Program.CreateDockerContainer(gameServers, string.Empty, null, out string instancedID,
+                    GameServerService.CreateDockerContainer(gameServers, string.Empty, null, out string instancedID,
                         out serverID);
-                    GameServer newServer = Program.CreateNewServer(gameServers, string.Empty, null,
+                    GameServer newServer = GameServerService.CreateNewServer(gameServers, string.Empty, null,
                         instancedID, serverID, false);
                     if (newServer != null)
                     {

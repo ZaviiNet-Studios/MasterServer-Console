@@ -1,4 +1,5 @@
 ﻿using ServerCommander.Interfaces;
+using ServerCommander.Services;
 
 namespace ServerCommander.Commands;
 
@@ -10,7 +11,7 @@ public class QuitCommand : IConsoleCommand
     public string Usage => "quit";
     public async Task ExecuteAsync(string[] args)
     {
-        Program.Quit();
+        GameServerService.Quit();
         await Task.CompletedTask;
     }
 }

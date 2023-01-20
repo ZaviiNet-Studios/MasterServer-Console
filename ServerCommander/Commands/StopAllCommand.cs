@@ -1,4 +1,5 @@
 ﻿using ServerCommander.Interfaces;
+using ServerCommander.Services;
 
 namespace ServerCommander.Commands;
 
@@ -11,7 +12,7 @@ public class StopAllCommand : IConsoleCommand
     public async Task ExecuteAsync(string[] args)
     {
         TFConsole.WriteLine("Stopping all game servers.");
-        await Program.DockerService.StopAllDockerContainers();
+        await GameServerService.DockerService.StopAllDockerContainers();
         TFConsole.WriteLine("Stopped all game servers.");
     }
 }

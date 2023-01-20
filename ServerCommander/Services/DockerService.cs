@@ -124,7 +124,7 @@ public class DockerService
             var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
 
             // Get the ID of the container to delete
-            var containerId = Program.GetServer(port)?.instanceId;
+            var containerId = GameServerService.GetServer(port)?.instanceId;
 
             // Delete the container
             try

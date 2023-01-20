@@ -1,4 +1,5 @@
 ﻿using ServerCommander.Interfaces;
+using ServerCommander.Services;
 
 namespace ServerCommander.Commands;
 
@@ -10,7 +11,7 @@ public class HelpCommand : IConsoleCommand
     public string Usage => "help [command:optional]";
     public async Task ExecuteAsync(string[] args)
     {
-        List<IConsoleCommand> commandServiceCommands = Program.CommandService.Commands;
+        List<IConsoleCommand> commandServiceCommands = GameServerService.CommandService.Commands;
         TFConsole.WriteLine("List of available commands:");
         
         if (args.Length == 0)

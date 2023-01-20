@@ -1,4 +1,5 @@
 ﻿using ServerCommander.Interfaces;
+using ServerCommander.Services;
 
 namespace ServerCommander.Commands;
 
@@ -54,7 +55,7 @@ public class AddServerCommand : IConsoleCommand
             }
         }
 
-        Program.CreateGameServers(ipaddress, port!.Value, 0, false);
+        GameServerService.CreateGameServers(ipaddress, port!.Value, 0, false);
 
         TFConsole.WriteLine(
             $"Added game server at {ipaddress}:{port} with InstanceID");
