@@ -97,12 +97,6 @@ public class HttpService
                         case "/servers.html":
                             ServerHtmlEndpoint(request, response);
                             break;
-                        case "/list-servers":
-                            ListServerEndpoint(response, gameServers);
-                            break;
-                        case "/show-full-servers":
-                            ListFullServersEndpoint(response, gameServers);
-                            break;
                         case "/connect":
                             ConnectEndpoint(request, response, gameServers);
                             break;
@@ -320,36 +314,5 @@ public class HttpService
         writer.Write(html);
         writer.Flush();
         writer.Close();
-    }
-
-    private void ListFullServersEndpoint(HttpListenerResponse response, List<GameServer> gameServers)
-    {
-        // Build the response string
-        var responseString = JsonSerializer.Serialize(gameServers.Where(s => s.playerCount == s.maxCapacity)
-            .Select(x => new
-            {
-                x.ipAddress,
-                x.port,
-                x.playerCount,
-                x.maxCapacity
-            }));
-        var responseBytes = Encoding.UTF8.GetBytes(responseString);
-        response.ContentLength64 = responseBytes.Length;
-        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
-    }
-
-    private void ListServerEndpoint(HttpListenerResponse response, List<GameServer> gameServers)
-    {
-        // Build the response string
-        var responseString = JsonSerializer.Serialize(gameServers.Select(x => new
-        {
-            x.ipAddress,
-            x.port,
-            x.playerCount,
-            x.maxCapacity
-        }));
-        var responseBytes = Encoding.UTF8.GetBytes(responseString);
-        response.ContentLength64 = responseBytes.Length;
-        response.OutputStream.Write(responseBytes, 0, responseBytes.Length);
     }
 }
