@@ -126,8 +126,7 @@ public class DockerService
             // Delete the container
             try
             {
-                client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters { Force = true })
-                    .Wait();
+                await client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters { Force = true });
             }
             catch (DockerApiException ex)
             {
