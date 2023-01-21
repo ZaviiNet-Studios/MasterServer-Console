@@ -1,4 +1,5 @@
 using BIAB.WebAPI;
+using Docker.DotNet;
 using Microsoft.AspNetCore.Identity;
 using ServerCommander.Data;
 using ServerCommander.Services;
@@ -44,10 +45,35 @@ app.AutoMigrateDb<ServerCommanderContext>();
 
 CancellationTokenSource cts = new CancellationTokenSource();
 
+
+// Check if Docker is running via docker client
+// If not running, throw exception
+// If running, continue
+bool isDockerRunning = false;
+try{
+    DockerClient client = new DockerClientConfiguration(new Uri("npipe://./pipe/docker_engine")).CreateClient();
+    var info = client.System.GetSystemInfoAsync().Result;
+    Console.WriteLine("Docker is running");
+    isDockerRunning = true;
+}
+catch(Exception ex){
+    Console.WriteLine("Error: Docker is not running!");
+    cts.Cancel();
+    isDockerRunning = false;
+}
+
+if (!isDockerRunning)
+{
+    Console.WriteLine("Please start Docker and try again");
+    return;
+}
+
+
 Console.WriteLine("API is starting");
 RunWebServer();
 Console.WriteLine("Starting Game Server Service");
 GameServerService.Main(cts);
+
 
 async void RunWebServer()
 {

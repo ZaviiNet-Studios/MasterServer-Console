@@ -6,7 +6,7 @@ namespace ServerCommander.Settings.Config
     {
         public const string DefaultFilePath = "config/settings.json";
         
-        public MasterServerSettings(bool createInitialGameServers = default, int numberofInitialGameServers = default, bool createStandbyGameServers = default, string? dockerContainerImage = null, string? dockerContainerImageTag = null, string? dockerHost = null, string? dockerNetwork = null,
+        public MasterServerSettings(bool createInitialGameServers = default, int numberOfInitialGameServers = default, bool createStandbyGameServers = default, string? dockerContainerImage = null, string? dockerContainerImageTag = null, string? dockerHost = null, string? dockerNetwork = null,
             string? dockerTcpNetwork = null, bool dockerContainerAutoRemove = default,
             bool dockerContainerAutoStart = default, bool dockerContainerAutoUpdate = default,
             string? masterServerIp = null, int masterServerWebPort = default, int masterServerApiPort = default,
@@ -19,7 +19,7 @@ namespace ServerCommander.Settings.Config
             bool gameServerRandomPorts = default,bool usePlayFab = default ,string? playFabTitleID = null, string? developerSecretKey = null)
         {
             CreateInitialGameServers = createInitialGameServers;
-            NumberofInitialGameServers = numberofInitialGameServers;
+            NumberOfInitialGameServers = numberOfInitialGameServers;
             CreateStandbyGameServers = createStandbyGameServers;
             DockerContainerImage = dockerContainerImage;
             DockerContainerImageTag = dockerContainerImageTag;
@@ -125,7 +125,7 @@ namespace ServerCommander.Settings.Config
         public bool DockerContainerAutoStart { get; set; }
         public bool DockerContainerAutoUpdate { get; set; }
         
-        public int NumberofInitialGameServers { get; set; }
+        public int NumberOfInitialGameServers { get; set; }
 
         public string? MasterServerIp { get; set; }
         public int MasterServerWebPort { get; set; }

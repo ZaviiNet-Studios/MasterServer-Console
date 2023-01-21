@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using Docker.DotNet;
 using Docker.DotNet.Models;
-using MasterServer;
 using Newtonsoft.Json;
 using PlayFab;
 using ServerCommander.Commands;
@@ -20,9 +19,7 @@ public class GameServerService
 {
     private static int _numServers;
     public static readonly MasterServerSettings Settings = MasterServerSettings.GetFromDisk();
-    private static readonly GameServers? InitialServers = InitialDockerContainerSettings();
     private static readonly int Port = Settings.MasterServerPort;
-    private static readonly int WebPort = Settings.MasterServerApiPort;
     private static readonly string? DefaultIp = Settings.MasterServerIp;
     private static int _portPool = Settings.GameServerPortPool;
 
@@ -48,7 +45,7 @@ public class GameServerService
 
     public static readonly CommandService CommandService = new();
 
-    private static ServerCommanderContext Context { get; set; }= new();
+    private static ServerCommanderContext Context { get; set; } = new();
     
     private static ServerInstanceRepository ServerInstanceRepository { get; set; } = new(Context);
     
@@ -91,7 +88,7 @@ public class GameServerService
         ServerInstanceRepository.Delete(instance);
     }
 
-    static CancellationTokenSource programCTS = new CancellationTokenSource();
+    static CancellationTokenSource programCTS = new ();
     public static async void Main(CancellationTokenSource cts)
     {
         programCTS = cts;
@@ -108,10 +105,8 @@ public class GameServerService
 
         ListenForServersThread.Start();
         CheckForEmptyServersThread.Start();
-
-
-        var partySize = 0;
-        CreateInitialGameServers(null, null, partySize);
+        
+        CreateInitialGameServers(null, null);
 
         RegisterCommands();
 
@@ -217,45 +212,42 @@ public class GameServerService
         Environment.Exit(0);
     }
 
-    private static void CreateInitialGameServers(string? ip, int? port, int partySize)
+    private static void CreateInitialGameServers(string? ip, int? port)
     {
-        if (_isRunning)
-        {
-            int gameServersToBeCreated = InitialServers?.numServers ?? 2;
-            int gameServersCreated = 0;
-            if (!Settings.CreateInitialGameServers) return;
-
-            for (int i = 0; i < gameServersToBeCreated; i++)
-            {
-                try
-                {
-                    CreateDockerContainer(ip, port, out string InstancedID, out string serverID);
-                    CreateNewServer( ip, port, InstancedID, serverID, true);
-                    gameServersCreated++;
-                }
-                catch (Exception ex)
-                {
-                    TFConsole.WriteLine($"Failed to start server: {ex.Message}", ConsoleColor.Red);
-                }
-            }
-
-            if (gameServersCreated > 0)
-                TFConsole.WriteLine(
-                    $"Initial game servers created successfully - Number Created = {gameServersCreated}",
-                    ConsoleColor.Green);
-            else
-                TFConsole.WriteLine("Failed to create servers", ConsoleColor.Red);
-        }
-        else
+        if (!_isRunning)
         {
             TFConsole.WriteLine("Docker is not running, Unable to create initial game servers", ConsoleColor.Red);
+            return;
         }
+
+        int gameServersToBeCreated = Settings.NumberOfInitialGameServers;
+        int gameServersCreated = Context.ServerInstances.Count();
+        if (!Settings.CreateInitialGameServers) return;
+
+        for (int i = 0; i < gameServersToBeCreated; i++)
+        {
+            try
+            {
+                CreateDockerContainer(ip, port, out string InstancedID, out string serverID);
+                CreateNewServer(ip, port, InstancedID, serverID, true);
+                gameServersCreated++;
+            }
+            catch (Exception ex)
+            {
+                TFConsole.WriteLine($"Failed to start server: {ex.Message}", ConsoleColor.Red);
+            }
+        }
+
+        if (gameServersCreated > 0)
+            TFConsole.WriteLine(
+                $"Initial game servers created successfully - Number Created = {gameServersCreated}",
+                ConsoleColor.Green);
+        else
+            TFConsole.WriteLine("Failed to create servers", ConsoleColor.Red);
     }
 
-    public static void CreateGameServers(string ip, int port, int partySize, bool isStandby)
+    public static void CreateGameServers(string ip, int port, bool isStandby)
     {
-        // This is not implemented yet?
-        //int gameServersToBeCreated = InitialServers?.numServers ?? 2;
         try
         {
             CreateDockerContainer( ip, port, out string InstancedID, out string serverID);
@@ -264,28 +256,6 @@ public class GameServerService
         catch (Exception ex)
         {
             TFConsole.WriteLine(ex.Message, ConsoleColor.Red);
-        }
-    }
-
-    private static GameServers? InitialDockerContainerSettings()
-    {
-        string filepath = "config/initialGameServers.json";
-        if (!File.Exists(filepath))
-        {
-            GameServers initialSettings = new()
-            {
-                numServers = 2
-            };
-            string json = JsonConvert.SerializeObject(initialSettings, Formatting.Indented);
-
-            Directory.CreateDirectory("config");
-            File.WriteAllText(filepath, json);
-            return initialSettings;
-        }
-        else
-        {
-            string json = File.ReadAllText(filepath);
-            return JsonConvert.DeserializeObject<GameServers>(json);
         }
     }
 

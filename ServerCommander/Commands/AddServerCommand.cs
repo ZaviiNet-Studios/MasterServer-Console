@@ -55,7 +55,7 @@ public class AddServerCommand : IConsoleCommand
             }
         }
 
-        GameServerService.CreateGameServers(ipaddress, port!.Value, 0, false);
+        GameServerService.CreateGameServers(ipaddress, port!.Value, false);
 
         TFConsole.WriteLine(
             $"Added game server at {ipaddress}:{port} with InstanceID");
