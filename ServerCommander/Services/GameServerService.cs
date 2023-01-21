@@ -221,7 +221,7 @@ public class GameServerService
         }
 
         int gameServersToBeCreated = Settings.NumberOfInitialGameServers;
-        int gameServersAlreadyExisted = Context.ServerInstances.Count();
+        int gameServersAlreadyExisted = ServerInstanceRepository.Get().Count();
         int gameServersCreated = 0;
         if (!Settings.CreateInitialGameServers) return;
 
