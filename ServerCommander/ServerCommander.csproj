@@ -35,4 +35,8 @@
       </EmbeddedResource>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\ServerCommander.Lib\ServerCommander.Lib.csproj" />
+    </ItemGroup>
+
 </Project>
