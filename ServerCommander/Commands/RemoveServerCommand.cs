@@ -27,8 +27,7 @@ public class RemoveServerCommand : IConsoleCommand
         }
 
         // Remove the game server from the list
-        GameServerService.RemoveServer(port.Value);
-        await GameServerService.DockerService.DeleteDockerContainerByPort(port.Value);
+        await GameServerService.RemoveServer(port.Value);
         TFConsole.WriteLine($"Removed game server at port {port.Value}.");
     }
 }

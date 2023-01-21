@@ -1,4 +1,4 @@
-﻿using ServerCommander.Classes;
+﻿using ServerCommander.Data.Entities;
 using ServerCommander.Interfaces;
 using ServerCommander.Services;
 
@@ -14,10 +14,10 @@ public class ListCommand : IConsoleCommand
     {
         // List the available game servers
         TFConsole.WriteLine("Available game servers:");
-        foreach (GameServer server in GameServerService.GetServers())
+        foreach (ServerInstance server in GameServerService.GetServerInstances())
         {
             TFConsole.WriteLine(
-                $"[{server.ServerId}] {server.ipAddress}:{server.port} ({server.playerCount}/{server.maxCapacity})");
+                $"[{server.ServerId}] {server.PublicIpAddress}:{server.Port} ({server.PlayerCount}/{server.MaxCapacity})");
         }
         return Task.CompletedTask;
     }

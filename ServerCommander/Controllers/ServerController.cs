@@ -1,8 +1,9 @@
-﻿using System.IO;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using PlayFab;
 using PlayFab.AdminModels;
-using ServerCommander.Classes;
+using ServerCommander.Data;
+using ServerCommander.Data.Entities;
+using ServerCommander.Data.Repositories;
 using ServerCommander.Models;
 using ServerCommander.Services;
 using ServerCommander.Settings.Config;
@@ -16,23 +17,25 @@ public class ServerController : ControllerBase
 
     private readonly ILogger<ServerController> _logger;
     private readonly MasterServerSettings _settings;
+    private readonly ServerInstanceRepository _repo;
 
-    public ServerController(ILogger<ServerController> logger)
+    public ServerController(ILogger<ServerController> logger, ServerCommanderContext context)
     {
         _logger = logger;
+        _repo = new ServerInstanceRepository(context);
         _settings = GameServerService.Settings;
     }
 
     [HttpGet("show-full-servers")]
     public ActionResult ListFull()
     {
-        var enumerable = GameServerService.GetServers().Where(s => s.playerCount == s.maxCapacity)
+        var enumerable =_repo.Get().Where(s => s.PlayerCount == s.MaxCapacity)
             .Select(x => new
             {
-                x.ipAddress,
-                x.port,
-                x.playerCount,
-                x.maxCapacity
+                IpAddress = x.PublicIpAddress,
+                x.Port,
+                x.PlayerCount,
+                x.MaxCapacity
             });
         return Ok(enumerable);
     }
@@ -40,13 +43,13 @@ public class ServerController : ControllerBase
     [HttpGet("list-servers")]
     public ActionResult List()
     {
-        var enumerable = GameServerService.GetServers()
+        var enumerable = _repo.Get()
             .Select(x => new
             {
-                x.ipAddress,
-                x.port,
-                x.playerCount,
-                x.maxCapacity
+                IpAddress = x.PublicIpAddress,
+                x.Port,
+                x.PlayerCount,
+                x.MaxCapacity
             });
         return Ok(enumerable);
     }
@@ -65,26 +68,26 @@ public class ServerController : ControllerBase
     [HttpPost("{serverId}/update-player-count")]
     public ActionResult UpdatePlayerCount(string serverId, [FromBody] UpdatePlayerCountRequest request)
     {
-        var server = GameServerService.GetServer(serverId);
-        if (server == null)
+        var worked = GameServerService.UpdateServerPlayerCount(serverId, request.PlayerCount);
+        if (worked)
         {
-            return NotFound();
+            return Ok();
+        }else
+        {
+            return BadRequest();
         }
-
-        server.playerCount = request.PlayerCount;
-        return Ok("account updated");
     }
 
     [HttpGet("admin-panel")]
     public ActionResult AdminList()
     {
-        var enumerable = GameServerService.GetServers().Select(x => new
+        var enumerable = _repo.Get().Select(x => new
         {
             x.ServerId,
-            x.ipAddress,
-            x.port,
-            x.playerCount,
-            x.maxCapacity,
+            IpAddress = x.PublicIpAddress,
+            x.Port,
+            x.PlayerCount,
+            x.MaxCapacity,
             status = x.GetStatus(),
             population = x.GetPopulation()
         });
@@ -111,68 +114,61 @@ public class ServerController : ControllerBase
             return Ok("Player is banned");
         }
 
-        var gameServers = GameServerService.GetServers();
+        var gameServers = _repo.Get();
         
-        var availableServer = GetAvailableServer(gameServers, partySize);
-        bool validAvailableServer = availableServer != null && availableServer.playerCount < availableServer.maxCapacity;
-        if (validAvailableServer)
+        var availableServer = GetAvailableServer(partySize);
+        if (availableServer != null)
         {
             TFConsole.WriteLine(
-                $"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}",
+                $"Party of size {partySize} is assigned to : {availableServer.PublicIpAddress}:{availableServer.Port} InstanceID:{availableServer.DockerInstanceId} Player Count is {availableServer.PlayerCount}",
                 ConsoleColor.Green);
 
-            availableServer.playerCount += partySize;
+            availableServer.UpdatePlayerCountOverride(availableServer.PlayerCount + partySize);
+            _repo.SaveChanges();
             return Ok(new
             {
-                ipAddress = availableServer.ipAddress,
-                port = availableServer.port,
+                ipAddress = availableServer.PublicIpAddress,
+                port = availableServer.Port,
                 serverId = availableServer.ServerId,
-                playerCount = availableServer.playerCount,
+                playerCount = availableServer.PlayerCount,
             });
         }
         else
         {
-            string serverID;
-            GameServerService.CreateDockerContainer(gameServers, string.Empty, null, out string instancedID,
-                out serverID);
-            GameServer newServer = GameServerService.CreateNewServer(gameServers, string.Empty, null,
-                instancedID, serverID, false);
-            if (newServer != null)
+            try
             {
+                string serverID;
+                GameServerService.CreateDockerContainer(string.Empty, null, out string instancedID,
+                    out serverID);
+                ServerInstance? newServer = GameServerService.CreateNewServer(string.Empty, null,
+                    instancedID, serverID, false);
                 return Ok(new
                 {
-                    ipAddress = newServer.ipAddress,
-                    port = newServer.port,
-                    playerCount = newServer.playerCount,
-                    maxCapacity = newServer.maxCapacity,
-                    instancedID = newServer.instanceId,
+                    ipAddress = newServer.PublicIpAddress,
+                    port = newServer.Port,
+                    playerCount = newServer.PlayerCount,
+                    maxCapacity = newServer.MaxCapacity,
+                    instancedID = newServer.DockerInstanceId,
                 });
             }
-            else
+            catch (Exception e)
             {
-                throw new Exception("Error creating new server");
+                TFConsole.WriteLine(e.Message, ConsoleColor.Red);
+                return Ok("No servers available");
             }
         }
     }
 
-    private static GameServer? GetAvailableServer(List<GameServer> gameServers, int partySize)
+    private ServerInstance? GetAvailableServer(int partySize)
     {
         // Check if there are any servers in the list
-        if (gameServers.Count == 0)
+        if (!_repo.Get().Any())
         {
             // If no servers, return null
             return null;
         }
-
-        // Sort the list of game servers by player count
-        gameServers.Sort((a, b) => a.playerCount.CompareTo(b.playerCount));
-
-        // Find the first game server with a player count less than its maximum capacity
-        var availableServer =
-            gameServers.FirstOrDefault(server => server.playerCount + partySize <= server.maxCapacity);
-        // Return the available server
-        // If no available servers, return the server with the lowest player count
-        return availableServer ?? gameServers[0];
+        
+        return _repo.Get().Where(s => s.PlayerCount + partySize <= s.MaxCapacity).OrderBy(s=>s.PlayerCount).FirstOrDefault();
     }
 
 

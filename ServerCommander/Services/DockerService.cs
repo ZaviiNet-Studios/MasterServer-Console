@@ -116,16 +116,13 @@ public class DockerService
         }
     }
 
-        public async Task DeleteDockerContainerByPort(int port)
+        public async Task DeleteDockerContainerByPort(string containerId)
         {
             var endpointUrl = $"{_settings.DockerTcpNetwork}";
 
             // Create a new DockerClient using the endpoint URL
             var client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
-
-            // Get the ID of the container to delete
-            var containerId = GameServerService.GetServer(port)?.instanceId;
-
+            
             // Delete the container
             try
             {

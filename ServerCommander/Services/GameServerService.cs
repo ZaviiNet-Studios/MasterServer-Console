@@ -6,11 +6,11 @@ using Docker.DotNet.Models;
 using MasterServer;
 using Newtonsoft.Json;
 using PlayFab;
-using PlayFab.AdminModels;
-using ServerCommander.Classes;
 using ServerCommander.Commands;
 using ServerCommander.Data;
 using ServerCommander.Data.Entities;
+using ServerCommander.Data.Enums;
+using ServerCommander.Data.Repositories;
 using ServerCommander.Lib.Modal;
 using ServerCommander.Settings.Config;
 
@@ -47,27 +47,48 @@ public class GameServerService
     private static readonly CancellationTokenSource CheckForEmptyServersCancellationToken = new();
 
     public static readonly CommandService CommandService = new();
-    private static readonly List<GameServer> Servers = new();
 
-    public static List<GameServer> GetServers() => Servers;
-
-    public static GameServer? GetServer(int port)
-    {
-        return Servers.FirstOrDefault(server => server.port == port);
-    }
+    private static ServerCommanderContext Context { get; set; }= new();
     
-    public static GameServer? GetServer(string serverId)
+    private static ServerInstanceRepository ServerInstanceRepository { get; set; } = new(Context);
+    
+    public static List<ServerInstance> GetServerInstances() => ServerInstanceRepository.Get().ToList();
+
+    public static bool UpdateServerPlayerCount(string serverId, int playerCount)
     {
-        return Servers.FirstOrDefault(server => server.ServerId == serverId);
+        ServerInstance? instance = ServerInstanceRepository.GetByServerId(serverId);
+        
+        if (instance == null) return false;
+        
+        instance.UpdatePlayerCountOverride(playerCount);
+        
+        Context.SaveChanges();
+        
+        return true;
+    } 
+    public static bool UpdateServerPlayerCount(int serverId, int playerCount)
+    {
+        ServerInstance? instance = ServerInstanceRepository.GetByPort(serverId);
+        
+        if (instance == null) return false;
+        
+        instance.UpdatePlayerCountOverride(playerCount);
+        
+        Context.SaveChanges();
+        
+        return true;
     }
 
-    public static void RemoveServer(int port)
+    public static async Task RemoveServer(int port)
     {
-        GameServer? gameServer = GetServer(port);
-        if (gameServer != null)
-        {
-            Servers.Remove(gameServer);
-        }
+        ServerInstance? instance = await ServerInstanceRepository.GetByPortAsync(port);
+        
+        if (instance == null) return;
+        
+        if(!string.IsNullOrWhiteSpace(instance.DockerInstanceId))
+            await DockerService.DeleteDockerContainerByPort(instance.DockerInstanceId);
+        
+        ServerInstanceRepository.Delete(instance);
     }
 
     static CancellationTokenSource programCTS = new CancellationTokenSource();
@@ -78,11 +99,11 @@ public class GameServerService
 
         ListenForServersThread = new Thread(() =>
         {
-            ListenForServers(Servers, ListenForServersCancellationToken.Token);
+            ListenForServers(ListenForServersCancellationToken.Token);
         });
         CheckForEmptyServersThread = new Thread(() =>
         {
-            CheckForEmptyServers(Servers, CheckForEmptyServersCancellationToken.Token);
+            CheckForEmptyServers(CheckForEmptyServersCancellationToken.Token);
         });
 
         ListenForServersThread.Start();
@@ -90,7 +111,7 @@ public class GameServerService
 
 
         var partySize = 0;
-        CreateInitialGameServers(Servers, null, null, partySize);
+        CreateInitialGameServers(null, null, partySize);
 
         RegisterCommands();
 
@@ -196,7 +217,7 @@ public class GameServerService
         Environment.Exit(0);
     }
 
-    private static void CreateInitialGameServers(List<GameServer> gameServers, string? ip, int? port, int partySize)
+    private static void CreateInitialGameServers(string? ip, int? port, int partySize)
     {
         if (_isRunning)
         {
@@ -208,8 +229,8 @@ public class GameServerService
             {
                 try
                 {
-                    CreateDockerContainer(gameServers, ip, port, out string InstancedID, out string serverID);
-                    CreateNewServer(gameServers, ip, port, InstancedID, serverID, true);
+                    CreateDockerContainer(ip, port, out string InstancedID, out string serverID);
+                    CreateNewServer( ip, port, InstancedID, serverID, true);
                     gameServersCreated++;
                 }
                 catch (Exception ex)
@@ -237,8 +258,8 @@ public class GameServerService
         //int gameServersToBeCreated = InitialServers?.numServers ?? 2;
         try
         {
-            CreateDockerContainer(Servers, ip, port, out string InstancedID, out string serverID);
-            CreateNewServer(Servers, ip, port, InstancedID, serverID, isStandby);
+            CreateDockerContainer( ip, port, out string InstancedID, out string serverID);
+            CreateNewServer( ip, port, InstancedID, serverID, isStandby);
         }
         catch (Exception ex)
         {
@@ -271,25 +292,33 @@ public class GameServerService
 
 
     //Server Creation Stuff
-    public static GameServer CreateNewServer(List<GameServer> gameServers, string? ip, int? port, string InstancedID,
+    public static ServerInstance CreateNewServer( string? ip, int? port, string InstancedID,
         string serverID, bool isStandby)
     {
         // Use the provided IP but fallback to DefaultIP if provided is null
-        string serverIP = ip ?? DefaultIp;
+        string serverIP = ip ?? DefaultIp ?? "0.0.0.0";
         int serverPort = _portPool;
 
         if (port != null)
             serverPort = port.Value;
 
-        GameServer gameServer = new GameServer(serverIP ?? "0.0.0.0", serverPort, 0, Settings.MaxPlayersPerServer,
-            InstancedID, true, serverID, isStandby);
+        ServerInstance gameServer = new ServerInstance
+        {
+            PublicIpAddress = serverIP,
+            PrivateIpAddress = serverIP,
+            Port = serverPort,
+            DockerInstanceId = InstancedID,
+            MaxCapacity = Settings.MaxPlayersPerServer,
+            ServerId = serverID,
+            State = isStandby ? ServerState.Standby : ServerState.Ready
+        };
 
-        gameServers.Add(gameServer);
+        ServerInstanceRepository.Add(gameServer);
         _portPool++;
         return gameServer;
     }
 
-    public static void CreateDockerContainer(List<GameServer> gameServers, string? ip, int? port,
+    public static void CreateDockerContainer(string? ip, int? port,
         out string InstancedID, out string ServerID)
     {
 
@@ -310,7 +339,7 @@ public class GameServerService
 
             if (Settings.AllowServerCreation)
             {
-                if (gameServers.Count < Settings.MaxGameServers)
+                if (ServerInstanceRepository.Get().Count() < Settings.MaxGameServers)
                 {
                     // Create a new DockerClient using the endpoint URL
                     DockerClient client = new DockerClientConfiguration(new Uri(endpointUrl)).CreateClient();
@@ -378,40 +407,42 @@ public class GameServerService
         }
     }
 
-    private static void CheckForEmptyServers(List<GameServer> gameServers,
-        CancellationToken cancellationToken)
+    private static void CheckForEmptyServers(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
             // Sleep for 5 minutes
             Thread.Sleep(5 * 60 * 1000);
 
+            List<ServerInstance> servers = ServerInstanceRepository.Get().ToList();
+            
             // Check each game server in the list
-            foreach (GameServer server in gameServers)
+            foreach (ServerInstance server in servers)
             {
                 // If the server has 0 players, delete the container
-                if (server.playerCount != 0) continue;
-                if (!server.isStandby)
+                if (server.PlayerCount != 0) continue;
+                if (server.State is not ServerState.Standby)
                 {
-                    _ = _dockerService.DeleteDockerContainer(server.instanceId);
-                    TFConsole.WriteLine($"Server {server.instanceId} has been deleted", ConsoleColor.Yellow);
-                    gameServers.RemoveAll(server => server.playerCount == 0);
+                    _ = _dockerService.DeleteDockerContainer(server.DockerInstanceId);
+                    TFConsole.WriteLine($"Server {server.DockerInstanceId} has been deleted", ConsoleColor.Yellow);
+                    ServerInstanceRepository.Delete(server);
                 }
                 else
                 {
                     TFConsole.WriteLine("Standby Server Detected, Not Deleting", ConsoleColor.Yellow);
                 }
             }
+
+            ServerInstanceRepository.SaveChanges();
         }
     }
 
-    private static async void ListenForServers(List<GameServer> gameServers, CancellationToken cancellationToken)
+    private static async void ListenForServers(CancellationToken cancellationToken)
     {
         // Create a TCP listener
         TcpListener listener = new(IPAddress.Any, Port);
         listener.Start();
 
-        ServerCommanderContext context = new();
         
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -440,28 +471,21 @@ public class GameServerService
             int playerCount = values.PlayerCount;
 
             // Find the game server with the matching server ID
-            GameServer? gameServer = gameServers.Find(server => server.ServerId == serverId);
+            ServerInstance? gameServer = await ServerInstanceRepository.GetByServerIdAsync(serverId);
             if (gameServer == null)
             {
                 TFConsole.WriteLine($"Received data from unknown game server: {serverId}", ConsoleColor.Red);
                 continue;
             }
-
-            ServerInstance? firstOrDefault = context.ServerInstances.FirstOrDefault(x => x.ServerId == serverId);
-            if (firstOrDefault != null)
-            {
-                firstOrDefault.UpdatePlayerCount(playerCount);
-                await context.SaveChangesAsync(cancellationToken);
-            }
-            // Update the game server's player count
-            gameServer.playerCount = playerCount;
-
+            
+            gameServer.UpdatePlayerCount(playerCount);
+            await Context.SaveChangesAsync(cancellationToken);
+            
             TFConsole.WriteLine($"Received data from game server {serverId}: {playerCount} players",
                 ConsoleColor.Green);
 
             // Close the connection with the game server
             client.Close();
         }
-        await context.DisposeAsync();
     }
 }

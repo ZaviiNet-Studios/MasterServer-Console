@@ -1,5 +1,4 @@
-﻿using ServerCommander.Classes;
-using ServerCommander.Interfaces;
+﻿using ServerCommander.Interfaces;
 using ServerCommander.Services;
 
 namespace ServerCommander.Commands;
@@ -40,17 +39,7 @@ public class OverwriteCommand : IConsoleCommand
                 TFConsole.WriteLine("Invalid player count");
             }
         }
-        GameServer? gameServer = GameServerService.GetServer(port.Value);
-        if (gameServer != null)
-        {
-            gameServer.playerCount = playerCount.Value;
-            TFConsole.WriteLine(
-                $"Overwrote player count of game server at port {port} to {playerCount}.");
-        }
-        else
-        {
-            TFConsole.WriteLine($"Game server at port {port} not found.",ConsoleColor.Red);
-        }
+        GameServerService.UpdateServerPlayerCount((int)port, (int)playerCount);
         return Task.CompletedTask;
     }
 }

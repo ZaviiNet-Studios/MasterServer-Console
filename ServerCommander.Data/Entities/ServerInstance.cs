@@ -24,8 +24,10 @@ public class ServerInstance
 
 
     public bool IsFull => PlayerCount >= MaxCapacity;
+    public bool IsActive => State is ServerState.Ready or ServerState.Running or ServerState.Unresponsive;
     
     public DateTime DateCreated { get; set; } = DateTime.UtcNow;
+    public DateTime? DateDeleted { get; set; } = null;
     
     
     public void UpdatePlayerCount(int playerCount)
@@ -34,7 +36,35 @@ public class ServerInstance
         LastPing = DateTime.UtcNow;
         PlayerCountUpdates.Add(new PlayerCountUpdate
         {
-            PlayerCount = playerCount
+            PlayerCount = playerCount,
+            FromServer = true
         });
+    }
+    
+    public void UpdatePlayerCountOverride(int playerCount)
+    {
+        PlayerCount = playerCount;
+        PlayerCountUpdates.Add(new PlayerCountUpdate
+        {
+            PlayerCount = playerCount,
+            FromServer = false
+        });
+    }
+    
+    public string GetPopulation()
+    {
+        float population = (float)PlayerCount / (float)MaxCapacity;
+
+        return population switch
+        {
+            >= 0.8f => "High",
+            >= 0.5f => "Medium",
+            _ => "Low",
+        };
+    }
+
+    public string GetStatus()
+    {
+        return IsActive ? (PlayerCount == MaxCapacity) ? "full":"active" : "offline";
     }
 }
