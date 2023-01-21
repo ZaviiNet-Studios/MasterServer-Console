@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ServerCommander.Data;
 
@@ -10,9 +11,11 @@ using ServerCommander.Data;
 namespace ServerCommander.Data.Migrations
 {
     [DbContext(typeof(ServerCommanderContext))]
-    partial class ServerCommanderContextModelSnapshot : ModelSnapshot
+    [Migration("20230121195958_Deleted")]
+    partial class Deleted
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.2");
