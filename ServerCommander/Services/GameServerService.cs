@@ -225,7 +225,7 @@ public class GameServerService
         int gameServersCreated = 0;
         if (!Settings.CreateInitialGameServers) return;
 
-        for (int i = gameServersAlreadyExisted; i <= gameServersToBeCreated; i++)
+        for (int i = gameServersAlreadyExisted; i < gameServersToBeCreated; i++)
         {
             try
             {
