@@ -10,7 +10,6 @@ using PlayFab.AdminModels;
 using ServerCommander.Classes;
 using ServerCommander.Commands;
 using ServerCommander.Lib.Modal;
-using ServerCommander.Models;
 using ServerCommander.Settings.Config;
 
 namespace ServerCommander.Services;
