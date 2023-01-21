@@ -462,5 +462,6 @@ public class GameServerService
             // Close the connection with the game server
             client.Close();
         }
+        await context.DisposeAsync();
     }
 }
