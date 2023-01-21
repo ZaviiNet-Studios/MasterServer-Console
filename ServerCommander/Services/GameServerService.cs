@@ -88,7 +88,7 @@ public class GameServerService
         ServerInstanceRepository.Delete(instance);
     }
 
-    static CancellationTokenSource programCTS = new ();
+    private static CancellationTokenSource? programCTS = null;
     public static async void Main(CancellationTokenSource cts)
     {
         programCTS = cts;
