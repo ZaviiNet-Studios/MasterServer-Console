@@ -239,7 +239,7 @@ public class GameServerService
             }
         }
 
-        if (gameServersCreated > 0)
+        if (gameServersCreated + gameServersAlreadyExisted > 0)
             TFConsole.WriteLine(
                 $"Initial game servers created successfully - Number Created = {gameServersCreated} - Number Existed = {gameServersAlreadyExisted}",
                 ConsoleColor.Green);
