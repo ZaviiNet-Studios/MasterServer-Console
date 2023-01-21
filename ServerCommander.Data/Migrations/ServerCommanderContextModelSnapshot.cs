@@ -228,7 +228,7 @@ namespace ServerCommander.Data.Migrations
 
                     b.HasIndex("ServerId");
 
-                    b.ToTable("PlayerCountUpdates");
+                    b.ToTable("PlayerCountUpdates", (string)null);
                 });
 
             modelBuilder.Entity("ServerCommander.Data.Entities.ServerInstance", b =>
@@ -273,7 +273,7 @@ namespace ServerCommander.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ServerInstances");
+                    b.ToTable("ServerInstances", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

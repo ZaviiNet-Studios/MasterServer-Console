@@ -9,6 +9,8 @@ using PlayFab;
 using PlayFab.AdminModels;
 using ServerCommander.Classes;
 using ServerCommander.Commands;
+using ServerCommander.Data;
+using ServerCommander.Data.Entities;
 using ServerCommander.Lib.Modal;
 using ServerCommander.Settings.Config;
 
@@ -68,8 +70,10 @@ public class GameServerService
         }
     }
 
-    public static async void Main(string[] args)
+    static CancellationTokenSource programCTS = new CancellationTokenSource();
+    public static async void Main(CancellationTokenSource cts)
     {
+        programCTS = cts;
         Startup();
 
         ListenForServersThread = new Thread(() =>
@@ -172,6 +176,7 @@ public class GameServerService
 
     public static void Quit()
     {
+        programCTS.Cancel();
         // Stop Main Thread Loop
         MainThreadRunning = false;
         _isRunning = false;
@@ -406,6 +411,8 @@ public class GameServerService
         TcpListener listener = new(IPAddress.Any, Port);
         listener.Start();
 
+        ServerCommanderContext context = new();
+        
         while (!cancellationToken.IsCancellationRequested)
         {
             // Wait for a game server to connect
@@ -430,6 +437,7 @@ public class GameServerService
 
             // Extract the server ID and player count from the dynamic object
             string serverId = values.ServerId;
+            int playerCount = values.PlayerCount;
 
             // Find the game server with the matching server ID
             GameServer? gameServer = gameServers.Find(server => server.ServerId == serverId);
@@ -439,8 +447,13 @@ public class GameServerService
                 continue;
             }
 
+            ServerInstance? firstOrDefault = context.ServerInstances.FirstOrDefault(x => x.ServerId == serverId);
+            if (firstOrDefault != null)
+            {
+                firstOrDefault.UpdatePlayerCount(playerCount);
+                await context.SaveChangesAsync(cancellationToken);
+            }
             // Update the game server's player count
-            int playerCount = values.PlayerCount;
             gameServer.playerCount = playerCount;
 
             TFConsole.WriteLine($"Received data from game server {serverId}: {playerCount} players",
