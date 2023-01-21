@@ -15,7 +15,7 @@ namespace ServerCommander.Services;
 public class GameServerService
 {
     private static int _numServers;
-    private static readonly MasterServerSettings Settings = MasterServerSettings.GetFromDisk();
+    public static readonly MasterServerSettings Settings = MasterServerSettings.GetFromDisk();
     private static readonly GameServers? InitialServers = InitialDockerContainerSettings();
     private static readonly int Port = Settings.MasterServerPort;
     private static readonly int WebPort = Settings.MasterServerApiPort;
