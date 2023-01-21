@@ -5,55 +5,7 @@ namespace ServerCommander.Settings.Config
     public class MasterServerSettings
     {
         public const string DefaultFilePath = "config/settings.json";
-        
-        public MasterServerSettings(bool createInitialGameServers = default, int numberOfInitialGameServers = default, bool createStandbyGameServers = default, string? dockerContainerImage = null, string? dockerContainerImageTag = null, string? dockerHost = null, string? dockerNetwork = null,
-            string? dockerTcpNetwork = null, bool dockerContainerAutoRemove = default,
-            bool dockerContainerAutoStart = default, bool dockerContainerAutoUpdate = default,
-            string? masterServerIp = null, int masterServerWebPort = default, int masterServerApiPort = default,
-            int masterServerPort = default, string? masterServerName = null, string? masterServerPassword = null,
-            int maxGameServers = default, int maxPlayers = default, int maxPartyMembers = default, int maxPlayersPerServer = default,
-            bool allowServerCreation = default, bool allowServerDeletion = default, bool allowServerJoining = default,
-            bool serverRestartOnCrash = default, bool serverRestartOnShutdown = default,
-            bool serverRestartOnUpdate = default, bool serverRestartSchedule = default,
-            string? serverRestartScheduleTime = null, int gameServerPortPool = default,
-            bool gameServerRandomPorts = default,bool usePlayFab = default ,string? playFabTitleID = null, string? developerSecretKey = null)
-        {
-            CreateInitialGameServers = createInitialGameServers;
-            NumberOfInitialGameServers = numberOfInitialGameServers;
-            CreateStandbyGameServers = createStandbyGameServers;
-            DockerContainerImage = dockerContainerImage;
-            DockerContainerImageTag = dockerContainerImageTag;
-            DockerHost = dockerHost;
-            DockerNetwork = dockerNetwork;
-            DockerTcpNetwork = dockerTcpNetwork;
-            DockerContainerAutoRemove = dockerContainerAutoRemove;
-            DockerContainerAutoStart = dockerContainerAutoStart;
-            DockerContainerAutoUpdate = dockerContainerAutoUpdate;
-            MasterServerIp = masterServerIp;
-            MasterServerWebPort = masterServerWebPort;
-            MasterServerApiPort = masterServerApiPort;
-            MasterServerPort = masterServerPort;
-            MasterServerName = masterServerName;
-            MasterServerPassword = masterServerPassword;
-            MaxGameServers = maxGameServers;
-            MaxPlayers = maxPlayers;
-            MaxPartyMembers = maxPartyMembers;
-            MaxPlayersPerServer = maxPlayersPerServer;
-            AllowServerCreation = allowServerCreation;
-            AllowServerDeletion = allowServerDeletion;
-            AllowServerJoining = allowServerJoining;
-            ServerRestartOnCrash = serverRestartOnCrash;
-            ServerRestartOnShutdown = serverRestartOnShutdown;
-            ServerRestartOnUpdate = serverRestartOnUpdate;
-            ServerRestartSchedule = serverRestartSchedule;
-            ServerRestartScheduleTime = serverRestartScheduleTime;
-            GameServerPortPool = gameServerPortPool;
-            GameServerRandomPorts = gameServerRandomPorts;
-            UsePlayFab = usePlayFab;
-            PlayFabTitleID = playFabTitleID;
-            DeveloperSecretKey = developerSecretKey;
-        }
-        
+
         public static MasterServerSettings Default => new MasterServerSettings
         {
             CreateInitialGameServers = true,
@@ -84,7 +36,8 @@ namespace ServerCommander.Settings.Config
             ServerRestartOnUpdate = false,
             ServerRestartSchedule = true,
             ServerRestartScheduleTime = "00:00",
-            GameServerPortPool = 5100,
+            GameServerPortPoolStartPort = 5100,
+            GameServerPortPoolEndPort = 5500,
             GameServerRandomPorts = false,
             UsePlayFab = false,
             PlayFabTitleID = null,
@@ -147,7 +100,8 @@ namespace ServerCommander.Settings.Config
         public bool ServerRestartOnUpdate { get; set; }
         public bool ServerRestartSchedule { get; set; }
         public string? ServerRestartScheduleTime { get; set; } 
-        public int GameServerPortPool { get; set; }
+        public int GameServerPortPoolStartPort { get; set; }
+        public int GameServerPortPoolEndPort { get; set; }
         public bool GameServerRandomPorts { get; set; }
         
         public bool CreateInitialGameServers { get; set; }

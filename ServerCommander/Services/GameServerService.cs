@@ -21,7 +21,8 @@ public class GameServerService
     public static readonly MasterServerSettings Settings = MasterServerSettings.GetFromDisk();
     private static readonly int Port = Settings.MasterServerPort;
     private static readonly string? DefaultIp = Settings.MasterServerIp;
-    private static int _portPool = Settings.GameServerPortPool;
+    
+    private static Queue<int> _availablePorts = default!;
 
     private static readonly string
         _networkString =
@@ -86,13 +87,20 @@ public class GameServerService
             await DockerService.DeleteDockerContainerByPort(instance.DockerInstanceId);
         
         ServerInstanceRepository.Delete(instance);
+        _availablePorts.Enqueue(instance.Port);
     }
 
-    private static CancellationTokenSource? programCTS = null;
+    private static CancellationTokenSource programCTS = default!;
     public static async void Main(CancellationTokenSource cts)
     {
         programCTS = cts;
         Startup();
+        
+        // Setup Port Queue
+        List<int> tempPortList = new List<int>(Enumerable.Range(Settings.GameServerPortPoolStartPort, Settings.GameServerPortPoolEndPort));
+        HashSet<int> usedPorts = ServerInstanceRepository.Get().Select(x => x.Port).ToHashSet();
+        tempPortList.RemoveAll(x => usedPorts.Contains(x));
+        _availablePorts = new Queue<int>(tempPortList);
 
         ListenForServersThread = new Thread(() =>
         {
@@ -268,7 +276,7 @@ public class GameServerService
     {
         // Use the provided IP but fallback to DefaultIP if provided is null
         string serverIP = ip ?? DefaultIp ?? "0.0.0.0";
-        int serverPort = _portPool;
+        int serverPort = _availablePorts.Dequeue();
 
         if (port != null)
             serverPort = port.Value;
@@ -285,7 +293,6 @@ public class GameServerService
         };
 
         ServerInstanceRepository.Add(gameServer);
-        _portPool++;
         return gameServer;
     }
 
@@ -301,7 +308,7 @@ public class GameServerService
         ServerID = randomGuid;
         string newInstancedID = string.Empty;
         string hostIp = ip ?? "0.0.0.0";
-        int hostPort = port ?? _portPool;
+        int hostPort = port ?? _availablePorts.Dequeue();
 
 
         try
@@ -397,6 +404,7 @@ public class GameServerService
                     _ = _dockerService.DeleteDockerContainer(server.DockerInstanceId);
                     TFConsole.WriteLine($"Server {server.DockerInstanceId} has been deleted", ConsoleColor.Yellow);
                     ServerInstanceRepository.Delete(server);
+                    _availablePorts.Enqueue(server.Port);
                 }
                 else
                 {
