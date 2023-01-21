@@ -40,7 +40,7 @@ public class ServerController : ControllerBase
     [HttpGet("list-servers")]
     public ActionResult List()
     {
-        var enumerable = GameServerService.GetServers().Where(s => s.playerCount == s.maxCapacity)
+        var enumerable = GameServerService.GetServers()
             .Select(x => new
             {
                 x.ipAddress,
