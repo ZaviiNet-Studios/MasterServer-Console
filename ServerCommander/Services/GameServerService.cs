@@ -115,7 +115,7 @@ public class GameServerService
         ListenForServersThread.Start();
         CheckForEmptyServersThread.Start();
         
-        CreateInitialGameServers(null, null);
+        CreateInitialGameServers();
 
         RegisterCommands();
 
@@ -215,7 +215,7 @@ public class GameServerService
         Environment.Exit(0);
     }
 
-    private static void CreateInitialGameServers(string? ip, int? port)
+    private static void CreateInitialGameServers(string? ip = null)
     {
         if (!_isRunning)
         {
@@ -232,9 +232,9 @@ public class GameServerService
         {
             try
             {
-                port ??= _availablePorts.Dequeue();
-                CreateDockerContainer(ip, port.Value, out string InstancedID, out string serverID);
-                CreateNewServer(ip, port.Value, InstancedID, serverID, true);
+                int port = _availablePorts.Dequeue();
+                CreateDockerContainer(ip, port, out string InstancedID, out string serverID);
+                CreateNewServer(ip, port, InstancedID, serverID, true);
                 gameServersCreated++;
             }
             catch (Exception ex)
