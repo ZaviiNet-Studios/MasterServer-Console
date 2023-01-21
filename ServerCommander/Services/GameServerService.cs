@@ -221,10 +221,11 @@ public class GameServerService
         }
 
         int gameServersToBeCreated = Settings.NumberOfInitialGameServers;
-        int gameServersCreated = Context.ServerInstances.Count();
+        int gameServersAlreadyExisted = Context.ServerInstances.Count();
+        int gameServersCreated = 0;
         if (!Settings.CreateInitialGameServers) return;
 
-        for (int i = 0; i < gameServersToBeCreated; i++)
+        for (int i = gameServersAlreadyExisted; i <= gameServersToBeCreated; i++)
         {
             try
             {
@@ -240,7 +241,7 @@ public class GameServerService
 
         if (gameServersCreated > 0)
             TFConsole.WriteLine(
-                $"Initial game servers created successfully - Number Created = {gameServersCreated}",
+                $"Initial game servers created successfully - Number Created = {gameServersCreated} - Number Existed = {gameServersAlreadyExisted}",
                 ConsoleColor.Green);
         else
             TFConsole.WriteLine("Failed to create servers", ConsoleColor.Red);
