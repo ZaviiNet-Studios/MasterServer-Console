@@ -11,7 +11,15 @@ public class RemoveServerCommand : IConsoleCommand
     public string Usage => "remove <server port>";
     public async Task ExecuteAsync(string[] args)
     {
-        int? port = (args.Length >= 1) ? int.Parse(args[0]) : null;
+        int? port = null;
+        if(args.Length >= 1)
+        {
+            if (int.TryParse(args[0], out int temp))
+            {
+                port = temp;
+            }
+        }
+        
         while (port == null)
         {
             TFConsole.WriteLine("Enter the port of the game server:");

@@ -13,7 +13,14 @@ public class AddServerCommand : IConsoleCommand
     {
         string? serverName = (args.Length>= 1) ? args[0] : null;
         string? ipaddress = (args.Length >= 2) ? args[1] : null;
-        int? port = (args.Length >= 3) ? int.Parse(args[2]) : null;
+        int? port = null;
+        if(args.Length >= 3)
+        {
+            if (int.TryParse(args[2], out int temp))
+            {
+                port = temp;
+            }
+        }
 
         while (string.IsNullOrEmpty(serverName))
         {

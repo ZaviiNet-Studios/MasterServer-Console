@@ -11,8 +11,22 @@ public class OverwriteCommand : IConsoleCommand
     public string Usage => "overwrite <server port:optional> <player number:optional>";
     public Task ExecuteAsync(string[] args)
     {
-        int? port = (args.Length >= 1) ? int.Parse(args[0]) : null;
-        int? playerCount = (args.Length >= 2) ? int.Parse(args[1]) : null;
+        int? port = null;
+        if(args.Length >= 1)
+        {
+            if (int.TryParse(args[0], out int temp))
+            {
+                port = temp;
+            }
+        }
+        int? playerCount = null;
+        if(args.Length >= 2)
+        {
+            if (int.TryParse(args[1], out int temp))
+            {
+                playerCount = temp;
+            }
+        }
         while (port == null)
         {
             TFConsole.WriteLine("Enter the port of the game server:");
