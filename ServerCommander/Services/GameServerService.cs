@@ -33,7 +33,6 @@ public class GameServerService
     /// </summary>
     private static bool MainThreadRunning { get; set; } = true;
 
-    private static readonly HttpService _httpService = new(WebPort, Settings);
     private static readonly DockerService _dockerService = new(Settings);
 
     public static DockerService DockerService => _dockerService;
@@ -51,6 +50,11 @@ public class GameServerService
     public static GameServer? GetServer(int port)
     {
         return Servers.FirstOrDefault(server => server.port == port);
+    }
+    
+    public static GameServer? GetServer(string serverId)
+    {
+        return Servers.FirstOrDefault(server => server.ServerId == serverId);
     }
 
     public static void RemoveServer(int port)
@@ -76,7 +80,6 @@ public class GameServerService
         });
 
         ListenForServersThread.Start();
-        _httpService.Start(Servers);
         CheckForEmptyServersThread.Start();
 
 
@@ -179,9 +182,6 @@ public class GameServerService
 
         // Stop All Docker Containers
         _ = _dockerService.StopAllDockerContainers();
-
-        // Stop Http Service
-        _httpService.Stop();
 
         // Save Current Settings To File
         Settings.SaveToDisk();

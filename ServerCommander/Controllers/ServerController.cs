@@ -1,8 +1,9 @@
-﻿using System.Text;
+﻿using System.IO;
 using Microsoft.AspNetCore.Mvc;
 using PlayFab;
 using PlayFab.AdminModels;
 using ServerCommander.Classes;
+using ServerCommander.Models;
 using ServerCommander.Services;
 using ServerCommander.Settings.Config;
 
@@ -47,6 +48,46 @@ public class ServerController : ControllerBase
                 x.playerCount,
                 x.maxCapacity
             });
+        return Ok(enumerable);
+    }
+
+    [HttpGet("servers.html")]
+    public ActionResult ServersHtml()
+    {
+        var fileContents = System.IO.File.ReadAllText("./Content/servers.html");
+        return new ContentResult()
+        {
+            Content = fileContents,
+            ContentType = "text/html"
+        };
+    }
+    
+    [HttpPost("{serverId}/update-player-count")]
+    public ActionResult UpdatePlayerCount(string serverId, [FromBody] UpdatePlayerCountRequest request)
+    {
+        var server = GameServerService.GetServer(serverId);
+        if (server == null)
+        {
+            return NotFound();
+        }
+
+        server.playerCount = request.PlayerCount;
+        return Ok("account updated");
+    }
+
+    [HttpGet("admin-panel")]
+    public ActionResult AdminList()
+    {
+        var enumerable = GameServerService.GetServers().Select(x => new
+        {
+            x.ServerId,
+            x.ipAddress,
+            x.port,
+            x.playerCount,
+            x.maxCapacity,
+            status = x.GetStatus(),
+            population = x.GetPopulation()
+        });
         return Ok(enumerable);
     }
 
