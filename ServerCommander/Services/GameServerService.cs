@@ -36,9 +36,8 @@ public class GameServerService
     /// </summary>
     private static bool MainThreadRunning { get; set; } = true;
 
-    private static readonly DockerService _dockerService = new(Settings);
+    public static readonly DockerService DockerService = new(Settings);
 
-    public static DockerService DockerService => _dockerService;
 
     private static Thread? ListenForServersThread { get; set; }
     private static readonly CancellationTokenSource ListenForServersCancellationToken = new();
@@ -115,7 +114,7 @@ public class GameServerService
         ListenForServersThread.Start();
         CheckForEmptyServersThread.Start();
         
-        CreateInitialGameServers();
+        await CreateInitialGameServers();
 
         RegisterCommands();
 
@@ -207,7 +206,7 @@ public class GameServerService
         CheckForEmptyServersThread?.Join();
 
         // Stop All Docker Containers
-        _ = _dockerService.StopAllDockerContainers();
+        _ = DockerService.StopAllDockerContainers();
 
         // Save Current Settings To File
         Settings.SaveToDisk();
@@ -215,7 +214,7 @@ public class GameServerService
         Environment.Exit(0);
     }
 
-    private static void CreateInitialGameServers(string? ip = null)
+    private static async Task CreateInitialGameServers(string? ip = null)
     {
         if (!_isRunning)
         {
@@ -233,7 +232,7 @@ public class GameServerService
             try
             {
                 int port = _availablePorts.Dequeue();
-                CreateDockerContainer(ip, port, out string InstancedID, out string serverID);
+                (string InstancedID, string serverID) = await CreateDockerContainer(ip, port);
                 CreateNewServer(ip, port, InstancedID, serverID, true);
                 gameServersCreated++;
             }
@@ -251,11 +250,11 @@ public class GameServerService
             TFConsole.WriteLine("Failed to create servers", ConsoleColor.Red);
     }
 
-    public static void CreateGameServers(string ip, int port, bool isStandby)
+    public static async Task CreateGameServers(string ip, int port, bool isStandby)
     {
         try
         {
-            CreateDockerContainer( ip, port, out string InstancedID, out string serverID);
+            (string InstancedID, string serverID) = await CreateDockerContainer( ip, port);
             CreateNewServer( ip, port, InstancedID, serverID, isStandby);
         }
         catch (Exception ex)
@@ -289,8 +288,7 @@ public class GameServerService
         return gameServer;
     }
 
-    public static void CreateDockerContainer(string? ip, int port,
-        out string InstancedID, out string ServerID)
+    public static async Task<(string,string)> CreateDockerContainer(string? ip, int port)
     {
 
         string imageName = $"{Settings.DockerContainerImage}";
@@ -298,7 +296,8 @@ public class GameServerService
         string endpointUrl = $"{Settings.DockerTcpNetwork}";
 
         string randomGuid = Guid.NewGuid().ToString();
-        ServerID = randomGuid;
+        string ServerID = randomGuid;
+        string InstancedID = String.Empty;
         string newInstancedID = string.Empty;
         string hostIp = ip ?? "0.0.0.0";
         int hostPort = port;
@@ -353,7 +352,7 @@ public class GameServerService
 
 
                     // Start the new container
-                    client.Containers.StartContainerAsync(containerId, null).Wait();
+                    await client.Containers.StartContainerAsync(containerId, null);
                     _numServers++;
 
                     TFConsole.WriteLine($"New Server Created with ID {ServerID}", ConsoleColor.Green);
@@ -376,6 +375,8 @@ public class GameServerService
             throw new Exception(
                 "Error Creating Server, Check Docker is Running/ Check Connection Settings are Correct");
         }
+        
+        return (InstancedID, ServerID);
     }
 
     private static void CheckForEmptyServers(CancellationToken cancellationToken)
@@ -394,7 +395,7 @@ public class GameServerService
                 if (server.PlayerCount != 0) continue;
                 if (server.State is not ServerState.Standby)
                 {
-                    _ = _dockerService.DeleteDockerContainer(server.DockerInstanceId);
+                    _ = DockerService.DeleteDockerContainer(server.DockerInstanceId);
                     TFConsole.WriteLine($"Server {server.DockerInstanceId} has been deleted", ConsoleColor.Yellow);
                     ServerInstanceRepository.Delete(server);
                     _availablePorts.Enqueue(server.Port);
@@ -429,7 +430,7 @@ public class GameServerService
             // Deserialize the JSON data into a dynamic object
             UpdatePlayerCountModal? values = JsonConvert.DeserializeObject<UpdatePlayerCountModal>(data);
 
-            dynamic json = JsonConvert.DeserializeObject<Dictionary<string, string>>(data);
+            dynamic? json = JsonConvert.DeserializeObject<Dictionary<string, string>>(data);
             Debug.WriteLine($"Received data from {json}");
 
             if (values == null)

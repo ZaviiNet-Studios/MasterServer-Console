@@ -45,7 +45,7 @@
                         if (writeQueue.Count == 0)
                             continue;
 
-                        writeItem item = writeQueue.First();
+                        writeItem? item = writeQueue.FirstOrDefault();
                         if (item == null)
                             continue;
 

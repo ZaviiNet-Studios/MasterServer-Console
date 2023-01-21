@@ -14,14 +14,11 @@ namespace ServerCommander.Controllers;
 [Route("[controller]")]
 public class ServerController : ControllerBase
 {
-
-    private readonly ILogger<ServerController> _logger;
     private readonly MasterServerSettings _settings;
     private readonly ServerInstanceRepository _repo;
 
-    public ServerController(ILogger<ServerController> logger, ServerCommanderContext context)
+    public ServerController(ServerCommanderContext context)
     {
-        _logger = logger;
         _repo = new ServerInstanceRepository(context);
         _settings = GameServerService.Settings;
     }
@@ -95,7 +92,7 @@ public class ServerController : ControllerBase
     }
 
     [HttpGet("connect")]
-    public ActionResult Connect([FromQuery] int partySize, [FromQuery] string playfabId)
+    public async Task<ActionResult> Connect([FromQuery] int partySize, [FromQuery] string playfabId)
     {
         if (!_settings.AllowServerJoining)
         {
@@ -106,15 +103,13 @@ public class ServerController : ControllerBase
         TFConsole.WriteLine($"Request with party size: {partySize} {playfabId}");
         
         // Validate token with PlayFab
-        var isPlayerBanned = ValidateRequest(playfabId);
+        var isPlayerBanned = await ValidateRequest(playfabId);
 
         if (!isPlayerBanned)
         {
             TFConsole.WriteLine("Player is banned", ConsoleColor.Red);
             return Ok("Player is banned");
         }
-
-        var gameServers = _repo.Get();
         
         var availableServer = GetAvailableServer(partySize);
         if (availableServer != null)
@@ -137,11 +132,9 @@ public class ServerController : ControllerBase
         {
             try
             {
-                string serverID;
                 int port = GameServerService.GetAvailablePort();
-                GameServerService.CreateDockerContainer(string.Empty, port, out string instancedID,
-                    out serverID);
-                ServerInstance? newServer = GameServerService.CreateNewServer(string.Empty, port,
+                (string instancedID, string serverID) = await GameServerService.CreateDockerContainer(string.Empty, port);
+                ServerInstance newServer = GameServerService.CreateNewServer(string.Empty, port,
                     instancedID, serverID, false);
                 return Ok(new
                 {
@@ -173,7 +166,7 @@ public class ServerController : ControllerBase
     }
 
 
-    private bool ValidateRequest(string playfabID)
+    private async Task<bool> ValidateRequest(string playfabID)
     {
         if (!_settings.UsePlayFab) return true;
         var adminAPISettings = new PlayFabApiSettings()
@@ -191,13 +184,9 @@ public class ServerController : ControllerBase
             PlayFabId = playfabID
         };
 
-        Task<PlayFabResult<GetUserBansResult>> task = authenticationApi.GetUserBansAsync(request);
-        task.Wait();
+        PlayFabResult<GetUserBansResult> task = await authenticationApi.GetUserBansAsync(request);
 
-        var response = task.Result;
-
-
-        var isBanned = response.Result.BanData.Count;
+        var isBanned = task.Result.BanData.Count;
 
         TFConsole.WriteLine($"Player has {isBanned} Ban(s) on Record");
 

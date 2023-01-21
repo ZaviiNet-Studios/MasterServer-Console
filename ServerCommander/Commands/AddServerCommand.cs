@@ -6,7 +6,7 @@ namespace ServerCommander.Commands;
 public class AddServerCommand : IConsoleCommand
 {
     public string Command => "addserver";
-    public string[] Aliases => new string[] { "add" };
+    public string[] Aliases => new [] { "add" };
     public string Description => "Adds a server to the list of servers";
     public string Usage => "addserver <server name:optional> <server :optional> <server port:optional>";
     public async Task ExecuteAsync(string[] args)
@@ -62,7 +62,7 @@ public class AddServerCommand : IConsoleCommand
             }
         }
 
-        GameServerService.CreateGameServers(ipaddress, port!.Value, false);
+        await GameServerService.CreateGameServers(ipaddress, port!.Value, false);
 
         TFConsole.WriteLine(
             $"Added game server at {ipaddress}:{port} with InstanceID");

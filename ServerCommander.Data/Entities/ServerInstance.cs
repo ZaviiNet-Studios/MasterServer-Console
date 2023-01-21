@@ -7,14 +7,14 @@ public class ServerInstance
     public int Id { get; set; }
     
     // Connection Data
-    public string PublicIpAddress { get; set; }
-    public string PrivateIpAddress { get; set; }
+    public string PublicIpAddress { get; set; } = default!;
+    public string PrivateIpAddress { get; set; } = default!;
     public int Port { get; set; }
     public int MaxCapacity { get; set; }
     
     // Instance Data
-    public string ServerId { get; set; }
-    public string DockerInstanceId { get; set; }
+    public string ServerId { get; set; } = default!;
+    public string DockerInstanceId { get; set; } = default!;
     
     // State Data
     public int PlayerCount { get; set; }
@@ -53,7 +53,7 @@ public class ServerInstance
     
     public string GetPopulation()
     {
-        float population = (float)PlayerCount / (float)MaxCapacity;
+        float population = PlayerCount/ (float)MaxCapacity;
 
         return population switch
         {

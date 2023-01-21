@@ -6,7 +6,7 @@ namespace ServerCommander.Commands;
 public class RemoveServerCommand : IConsoleCommand
 {
     public string Command => "remove";
-    public string[] Aliases => new string[] { "rm" };
+    public string[] Aliases => new [] { "rm" };
     public string Description => "Removes a server from the list";
     public string Usage => "remove <server port>";
     public async Task ExecuteAsync(string[] args)

@@ -33,10 +33,10 @@ public class DockerService
                 {
                     if (container.Names[0].Contains("GameServer-Instance--"))
                     {
-                        client.Containers.StopContainerAsync(container.ID, new ContainerStopParameters()
+                        await client.Containers.StopContainerAsync(container.ID, new ContainerStopParameters()
                         {
                             WaitBeforeKillSeconds = 10
-                        }).Wait();
+                        });
                     }
                 }
             }
@@ -67,9 +67,7 @@ public class DockerService
                 {
                     if (container.Names[0].Contains("GameServer-Instance--"))
                     {
-                        client.Containers.StartContainerAsync(container.ID, new ContainerStartParameters()
-                        {
-                        }).Wait();
+                        await client.Containers.StartContainerAsync(container.ID, new ContainerStartParameters());
                     }
                 }
             }
@@ -101,10 +99,10 @@ public class DockerService
                     {
                         if (name.Contains("GameServer"))
                         {
-                            client.Containers.RemoveContainerAsync(container.ID, new ContainerRemoveParameters()
+                            await client.Containers.RemoveContainerAsync(container.ID, new ContainerRemoveParameters()
                             {
                                 Force = true
-                            }).Wait();
+                            });
                         }
                     }
                 }
@@ -135,7 +133,7 @@ public class DockerService
         }
 
 
-        public Task DeleteDockerContainer(string containerId)
+        public async Task DeleteDockerContainer(string containerId)
         {
             // Set the API endpoint URL
             var endpointUrl = $"{_settings.DockerTcpNetwork}";
@@ -148,7 +146,7 @@ public class DockerService
                 // Delete the container by its ID
                 try
                 {
-                    client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters()).Wait();
+                    await client.Containers.RemoveContainerAsync(containerId, new ContainerRemoveParameters());
                 }
                 catch (DockerApiException ex)
                 {
@@ -159,14 +157,12 @@ public class DockerService
             {
                 try
                 {
-                    client.Containers.StopContainerAsync(containerId, new ContainerStopParameters()).Wait();
+                    await client.Containers.StopContainerAsync(containerId, new ContainerStopParameters());
                 }
                 catch (DockerApiException ex)
                 {
                     TFConsole.WriteLine($"Error stopping container: {ex.Message}",ConsoleColor.Red);
                 }
             }
-
-            return Task.CompletedTask;
         }
 }

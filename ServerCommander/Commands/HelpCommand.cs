@@ -6,7 +6,7 @@ namespace ServerCommander.Commands;
 public class HelpCommand : IConsoleCommand
 {
     public string Command => "help";
-    public string[] Aliases => new string[] { "h", "?" };
+    public string[] Aliases => new [] { "h", "?" };
     public string Description => "Displays a list of commands and their descriptions.";
     public string Usage => "help [command:optional]";
     public async Task ExecuteAsync(string[] args)

@@ -7,7 +7,7 @@ namespace ServerCommander.Commands;
 public class ListCommand : IConsoleCommand
 {
     public string Command => "list";
-    public string[] Aliases => new string[] { "ls" };
+    public string[] Aliases => new [] { "ls" };
     public string Description => "Lists all available game servers";
     public string Usage => "list";
     public Task ExecuteAsync(string[] args)

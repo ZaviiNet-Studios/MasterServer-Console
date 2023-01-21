@@ -6,7 +6,7 @@ namespace ServerCommander.Commands;
 public class OverwriteCommand : IConsoleCommand
 {
     public string Command => "overwrite";
-    public string[] Aliases => new string[] { "ow" };
+    public string[] Aliases => new [] { "ow" };
     public string Description => "Overwrites the player numbers settings";
     public string Usage => "overwrite <server port:optional> <player number:optional>";
     public Task ExecuteAsync(string[] args)
