@@ -187,12 +187,6 @@ public class GameServerService
         TFConsole.Start();
         TFConsole.WriteLine("Loading ServerCommander\n", ConsoleColor.Green);
         TFConsole.WriteLine($"Starting {Settings.MasterServerName}...\n", ConsoleColor.Green);
-        if (Settings.AllowServerDeletion)
-        {
-            _ = _dockerService.DeleteExistingDockerContainers();
-        }
-
-        TFConsole.WriteLine("Deleting existing Docker containers..., please wait", ConsoleColor.Green);
         TFConsole.WriteLine($"Send POST Data To http://{Settings.MasterServerIp}:{Port}\n", ConsoleColor.Green);
         TFConsole.WriteLine("Waiting for Commands... type 'help' to get a list of commands\n", ConsoleColor.Green);
         TFConsole.WriteLine("Type Quit or Exit to Close Application.", ConsoleColor.Green);
