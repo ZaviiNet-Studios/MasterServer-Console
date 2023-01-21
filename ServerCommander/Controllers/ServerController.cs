@@ -138,9 +138,10 @@ public class ServerController : ControllerBase
             try
             {
                 string serverID;
-                GameServerService.CreateDockerContainer(string.Empty, null, out string instancedID,
+                int port = GameServerService.GetAvailablePort();
+                GameServerService.CreateDockerContainer(string.Empty, port, out string instancedID,
                     out serverID);
-                ServerInstance? newServer = GameServerService.CreateNewServer(string.Empty, null,
+                ServerInstance? newServer = GameServerService.CreateNewServer(string.Empty, port,
                     instancedID, serverID, false);
                 return Ok(new
                 {

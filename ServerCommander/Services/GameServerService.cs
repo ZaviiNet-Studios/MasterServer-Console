@@ -23,6 +23,7 @@ public class GameServerService
     private static readonly string? DefaultIp = Settings.MasterServerIp;
     
     private static Queue<int> _availablePorts = default!;
+    public static int GetAvailablePort() => _availablePorts.Dequeue();
 
     private static readonly string
         _networkString =
@@ -231,8 +232,9 @@ public class GameServerService
         {
             try
             {
-                CreateDockerContainer(ip, port, out string InstancedID, out string serverID);
-                CreateNewServer(ip, port, InstancedID, serverID, true);
+                port ??= _availablePorts.Dequeue();
+                CreateDockerContainer(ip, port.Value, out string InstancedID, out string serverID);
+                CreateNewServer(ip, port.Value, InstancedID, serverID, true);
                 gameServersCreated++;
             }
             catch (Exception ex)
@@ -265,15 +267,12 @@ public class GameServerService
 
 
     //Server Creation Stuff
-    public static ServerInstance CreateNewServer( string? ip, int? port, string InstancedID,
+    public static ServerInstance CreateNewServer( string? ip, int port, string InstancedID,
         string serverID, bool isStandby)
     {
         // Use the provided IP but fallback to DefaultIP if provided is null
         string serverIP = ip ?? DefaultIp ?? "0.0.0.0";
-        int serverPort = _availablePorts.Dequeue();
-
-        if (port != null)
-            serverPort = port.Value;
+        int serverPort = port;
 
         ServerInstance gameServer = new ServerInstance
         {
@@ -290,7 +289,7 @@ public class GameServerService
         return gameServer;
     }
 
-    public static void CreateDockerContainer(string? ip, int? port,
+    public static void CreateDockerContainer(string? ip, int port,
         out string InstancedID, out string ServerID)
     {
 
@@ -302,7 +301,7 @@ public class GameServerService
         ServerID = randomGuid;
         string newInstancedID = string.Empty;
         string hostIp = ip ?? "0.0.0.0";
-        int hostPort = port ?? _availablePorts.Dequeue();
+        int hostPort = port;
 
 
         try
