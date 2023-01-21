@@ -59,11 +59,8 @@ public class ServerController : ControllerBase
             return Ok("Server joining is disabled");
         }
 
-        TFConsole.WriteLine(
-            $"Request with party size: {partySize} {playfabId}");
-
-        ValidateRequest(playfabId);
-
+        TFConsole.WriteLine($"Request with party size: {partySize} {playfabId}");
+        
         // Validate token with PlayFab
         var isPlayerBanned = ValidateRequest(playfabId);
 
@@ -76,63 +73,43 @@ public class ServerController : ControllerBase
         var gameServers = GameServerService.GetServers();
         
         var availableServer = GetAvailableServer(gameServers, partySize);
-        if (availableServer != null)
+        bool validAvailableServer = availableServer != null && availableServer.playerCount < availableServer.maxCapacity;
+        if (validAvailableServer)
         {
-            if (availableServer.playerCount < availableServer.maxCapacity)
+            TFConsole.WriteLine(
+                $"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}",
+                ConsoleColor.Green);
+
+            availableServer.playerCount += partySize;
+            return Ok(new
             {
-                if (partySize == 0)
-                {
-                    partySize = 1;
-                }
-
-                TFConsole.WriteLine(
-                    $"Party of size {partySize} is assigned to : {availableServer.ipAddress}:{availableServer.port} InstanceID:{availableServer.instanceId} Player Count is {availableServer.playerCount}",
-                    ConsoleColor.Green);
-
-                availableServer.playerCount += partySize;
-                return Ok(new
-                {
-                    ipAddress = availableServer.ipAddress,
-                    port = availableServer.port,
-                    serverId = availableServer.ServerId,
-                    playerCount = availableServer.playerCount,
-                });
-
-            }
-            else
-            {
-                return Ok("No available game servers");
-            }
-
+                ipAddress = availableServer.ipAddress,
+                port = availableServer.port,
+                serverId = availableServer.ServerId,
+                playerCount = availableServer.playerCount,
+            });
         }
         else
         {
-            try
+            string serverID;
+            GameServerService.CreateDockerContainer(gameServers, string.Empty, null, out string instancedID,
+                out serverID);
+            GameServer newServer = GameServerService.CreateNewServer(gameServers, string.Empty, null,
+                instancedID, serverID, false);
+            if (newServer != null)
             {
-                string serverID;
-                GameServerService.CreateDockerContainer(gameServers, string.Empty, null, out string instancedID,
-                    out serverID);
-                GameServer newServer = GameServerService.CreateNewServer(gameServers, string.Empty, null,
-                    instancedID, serverID, false);
-                if (newServer != null)
+                return Ok(new
                 {
-                    return Ok(new
-                    {
-                        ipAddress = newServer.ipAddress,
-                        port = newServer.port,
-                        playerCount = newServer.playerCount,
-                        maxCapacity = newServer.maxCapacity,
-                        instancedID = newServer.instanceId,
-                    });
-                }
-                else
-                {
-                    throw new Exception();
-                }
+                    ipAddress = newServer.ipAddress,
+                    port = newServer.port,
+                    playerCount = newServer.playerCount,
+                    maxCapacity = newServer.maxCapacity,
+                    instancedID = newServer.instanceId,
+                });
             }
-            catch
+            else
             {
-                return Ok("Error creating new server");
+                throw new Exception("Error creating new server");
             }
         }
     }
@@ -168,11 +145,9 @@ public class ServerController : ControllerBase
         };
 
         var authenticationApi = new PlayFabAdminInstanceAPI(adminAPISettings);
-
-
+        
         TFConsole.WriteLine("Validating Player " + playfabID);
-
-
+        
         var request = new GetUserBansRequest()
         {
             PlayFabId = playfabID
@@ -188,12 +163,6 @@ public class ServerController : ControllerBase
 
         TFConsole.WriteLine($"Player has {isBanned} Ban(s) on Record");
 
-        if (isBanned > 0)
-        {
-            return false;
-        }
-
-        return true;
-
+        return isBanned <= 0;
     }
 }
